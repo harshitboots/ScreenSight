@@ -1,5 +1,5 @@
 # Documentation site dependencies (MkDocs Material).
 # Used by `mkdocs serve` locally and by .github/workflows/docs.yml in CI.
-mkdocs>=1.6,<2.0
+mkdocs>=1.6.1,<2.0
 mkdocs-material>=9.5,<10.0
 pymdown-extensions>=10.7,<11.0
