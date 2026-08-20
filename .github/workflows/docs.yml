@@ -59,7 +59,7 @@ jobs:
 
       - name: Configure Pages
         if: github.event_name != 'pull_request'
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
         with:
           # Creates the Pages site (source: GitHub Actions) if it does not
           # exist yet, instead of failing with "Get Pages site failed" and
