@@ -1,10 +1,9 @@
 """Tests for WSL capture backend with mocked subprocess calls."""
 from __future__ import annotations
 
-import json
 import platform
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -15,10 +14,10 @@ pytestmark = pytest.mark.skipif(
     reason="WSL capture tests require Windows (powershell.exe, wslpath)"
 )
 
-from screensight.capture.base import CaptureBackend, CaptureResult
+from screensight.capture.base import CaptureBackend
 from screensight.capture.windows import (
-    WSLCapture,
     WindowsCapture,
+    WSLCapture,
     get_windows_temp_dir,
     is_wsl2,
     win_to_wsl_path,
@@ -192,7 +191,7 @@ class TestIsWsl2:
     def test_assume_wsl2_on_error(self, monkeypatch):
         """Assume WSL2 when wsl.exe fails."""
         def failing_run(cmd, *args, **kwargs):
-            raise Exception("wsl.exe not found")
+            raise OSError("wsl.exe not found")
         
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
@@ -213,7 +212,6 @@ class TestWSLCapture:
         """Successful capture from WSL."""
         out_path = str(tmp_path / "frame.jpg")
         win_temp = "C:\\Users\\test\\AppData\\Local\\Temp"
-        win_out = f"{win_temp}\\screensight-frame.jpg"
         wsl_out = "/mnt/c/Users/test/AppData/Local/Temp/screensight-frame.jpg"
 
         # Mock subprocess calls
@@ -374,7 +372,7 @@ class TestWSLCapture:
     def test_active_window_title_fallback(self, monkeypatch):
         """Fallback to None when title extraction fails."""
         def failing_run(cmd, *args, **kwargs):
-            raise Exception("PowerShell failed")
+            raise OSError("PowerShell failed")
         
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
@@ -410,7 +408,7 @@ class TestWSLCapture:
     def test_list_displays_fallback(self, monkeypatch):
         """Fallback to primary display when listing fails."""
         def failing_run(cmd, *args, **kwargs):
-            raise Exception("PowerShell failed")
+            raise OSError("PowerShell failed")
         
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",

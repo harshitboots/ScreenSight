@@ -18,7 +18,7 @@ def is_wsl2() -> bool:
     try:
         proc = subprocess.run(
             ["wsl.exe", "--list", "--verbose"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True, text=True, timeout=5, check=False,
         )
         # WSL2 output contains version info; look for version 2
         # Output format: "  Ubuntu    Running    2"
@@ -37,7 +37,7 @@ def win_to_wsl_path(win_path: str) -> str:
     
     proc = subprocess.run(
         ["wslpath", "-u", win_path],
-        capture_output=True, text=True, timeout=WSL_PATH_CONVERT_TIMEOUT,
+        capture_output=True, text=True, timeout=WSL_PATH_CONVERT_TIMEOUT, check=False,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"wslpath failed: {proc.stderr.strip()}")
@@ -54,7 +54,7 @@ def wsl_to_win_path(wsl_path: str) -> str:
     
     proc = subprocess.run(
         ["wslpath", "-w", wsl_path],
-        capture_output=True, text=True, timeout=WSL_PATH_CONVERT_TIMEOUT,
+        capture_output=True, text=True, timeout=WSL_PATH_CONVERT_TIMEOUT, check=False,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"wslpath failed: {proc.stderr.strip()}")
@@ -68,7 +68,7 @@ def get_windows_temp_dir() -> str:
     """
     proc = subprocess.run(
         ["powershell.exe", "-NoProfile", "-Command", "$env:TEMP"],
-        capture_output=True, text=True, timeout=WSL_TEMP_DIR_TIMEOUT,
+        capture_output=True, text=True, timeout=WSL_TEMP_DIR_TIMEOUT, check=False,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"Failed to get Windows TEMP dir: {proc.stderr.strip()}")
@@ -138,7 +138,7 @@ class WindowsCapture(CaptureBackend):
         except subprocess.TimeoutExpired:
             return CaptureResult(ok=False, error="PowerShell capture timed out")
 
-    def active_window_title(self) -> Optional[str]:
+    def active_window_title(self) -> str | None:
         """Get the active window title via PowerShell DllImport.
         
         Returns None if PowerShell invocation fails — callers must treat
@@ -147,7 +147,7 @@ class WindowsCapture(CaptureBackend):
         try:
             proc = subprocess.run(
                 ["powershell.exe", "-NoProfile", "-Command", _PS_TITLE_SCRIPT],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, timeout=10, check=False,
             )
             if proc.returncode == 0 and proc.stdout.strip():
                 return proc.stdout.strip()
@@ -168,7 +168,7 @@ class WindowsCapture(CaptureBackend):
         try:
             proc = subprocess.run(
                 ["powershell.exe", "-NoProfile", "-Command", script],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, timeout=10, check=False,
             )
             if proc.returncode == 0 and proc.stdout.strip():
                 displays = []
@@ -196,7 +196,7 @@ class WSLCapture(WindowsCapture):
     - Write access to Windows TEMP directory
     """
 
-    def screenshot(self, out_path: str, display: Optional[int] = None) -> CaptureResult:
+    def screenshot(self, out_path: str, display: int | None = None) -> CaptureResult:
         # Check for required tools
         if not shutil.which("powershell.exe"):
             return CaptureResult(
@@ -243,7 +243,7 @@ class WSLCapture(WindowsCapture):
         except Exception as e:
             return CaptureResult(ok=False, error=f"WSL copy-back failed: {e}")
 
-    def active_window_title(self) -> Optional[str]:
+    def active_window_title(self) -> str | None:
         """Get the active window title from Windows host.
         
         Tries PowerShell DllImport first (works in most WSL2 setups).
