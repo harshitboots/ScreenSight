@@ -11,6 +11,7 @@ The daemon loop lives at the bottom of this file and is invoked via
 ``python -m screensight.watch`` so it runs in its own OS process,
 not as a thread inside the MCP server.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,7 +20,6 @@ import signal
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 from .config import (
     DAEMON_PID_FILE,
@@ -29,9 +29,8 @@ from .config import (
     ensure_base_dir,
 )
 from .core import capture_once
-from .diff import frame_changed, sha256_of_file
+from .diff import frame_changed
 from .state import is_on, turn_off
-
 
 # ── Public helpers ────────────────────────────────────────────────────
 
@@ -59,9 +58,7 @@ def start_daemon(interval: int = DEFAULT_INTERVAL, max_frames: int = DEFAULT_MAX
         "stdin": subprocess.DEVNULL,
     }
     if sys.platform == "win32":
-        kwargs["creationflags"] = (
-            subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW
-        )
+        kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW
     else:
         kwargs["start_new_session"] = True
 
@@ -82,6 +79,7 @@ def stop_daemon() -> dict:
         try:
             if sys.platform == "win32":
                 import ctypes
+
                 kernel32 = ctypes.windll.kernel32
                 handle = kernel32.OpenProcess(1, False, pid)  # PROCESS_TERMINATE
                 if handle:
@@ -115,6 +113,7 @@ def daemon_status() -> dict:
 
 # ── Internal pid helpers ──────────────────────────────────────────────
 
+
 def _read_pid() -> int | None:
     ensure_base_dir()
     if not DAEMON_PID_FILE.exists():
@@ -134,6 +133,7 @@ def _process_alive(pid: int) -> bool:
     """Return True if *pid* is a running process we can signal."""
     if sys.platform == "win32":
         import ctypes
+
         kernel32 = ctypes.windll.kernel32
         handle = kernel32.OpenProcess(0x1000, False, pid)  # SYNCHRONIZE
         if handle:
@@ -155,6 +155,7 @@ def _cleanup() -> None:
 
 
 # ── Daemon loop (runs in the detached subprocess) ────────────────────
+
 
 def _daemon_loop(interval: int, max_frames: int) -> None:
     """Core loop — called by ``__main__`` when this module is run directly.

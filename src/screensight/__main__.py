@@ -11,6 +11,7 @@ Usage:
     screensight watch-status
     screensight displays
 """
+
 from __future__ import annotations
 
 import argparse
@@ -39,11 +40,15 @@ def cmd_capture(args: argparse.Namespace) -> None:
     if not outcome.ok:
         print(json.dumps({"error": outcome.error}), file=sys.stderr)
         sys.exit(3)
-    print(json.dumps({
-        "path": outcome.path,
-        "sha256": outcome.sha256,
-        "active_window_title": outcome.active_window_title,
-    }))
+    print(
+        json.dumps(
+            {
+                "path": outcome.path,
+                "sha256": outcome.sha256,
+                "active_window_title": outcome.active_window_title,
+            }
+        )
+    )
 
 
 def cmd_watch(args: argparse.Namespace) -> None:
@@ -81,14 +86,21 @@ def main() -> None:
     sub.add_parser("status", help="Check whether screen access is on")
 
     cap = sub.add_parser("capture", help="Capture the current screen")
-    cap.add_argument("--display", type=int, default=None,
-                     help="Display index (omit for primary)")
+    cap.add_argument("--display", type=int, default=None, help="Display index (omit for primary)")
 
     w = sub.add_parser("watch", help="Start a bounded watch session")
-    w.add_argument("--interval", type=int, default=watch.DEFAULT_INTERVAL,
-                   help="Seconds between polls (default: %(default)s)")
-    w.add_argument("--max-frames", type=int, default=watch.DEFAULT_MAX_FRAMES,
-                   help="Max changed frames before auto-stop (default: %(default)s)")
+    w.add_argument(
+        "--interval",
+        type=int,
+        default=watch.DEFAULT_INTERVAL,
+        help="Seconds between polls (default: %(default)s)",
+    )
+    w.add_argument(
+        "--max-frames",
+        type=int,
+        default=watch.DEFAULT_MAX_FRAMES,
+        help="Max changed frames before auto-stop (default: %(default)s)",
+    )
 
     sub.add_parser("watch-stop", help="Stop a running watch daemon")
     sub.add_parser("watch-status", help="Check watch daemon status")

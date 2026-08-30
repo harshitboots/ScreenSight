@@ -2,10 +2,10 @@
 daemon all route through capture_once() so the safety checks live in
 exactly one place.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .capture.base import get_backend
 from .config import FRAME_PATH, ensure_base_dir
@@ -17,13 +17,13 @@ from .state import is_on
 @dataclass
 class CaptureOutcome:
     ok: bool
-    path: Optional[str] = None
-    sha256: Optional[str] = None
-    error: Optional[str] = None
-    active_window_title: Optional[str] = None
+    path: str | None = None
+    sha256: str | None = None
+    error: str | None = None
+    active_window_title: str | None = None
 
 
-def capture_once(display: Optional[int] = None) -> CaptureOutcome:
+def capture_once(display: int | None = None) -> CaptureOutcome:
     """Returns exit-code-3 semantics as ok=False, error='off' when the
     master switch is off — checked here, not just in a prompt."""
     if not is_on():

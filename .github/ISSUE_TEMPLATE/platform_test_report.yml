@@ -1,0 +1,51 @@
+name: Platform test report
+description: Report results of running ScreenSight on macOS, Linux, or WSL
+title: "[Platform]: results on "
+labels: ["platform-test"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The macOS, Linux, and WSL capture backends are written but marked ⚠️ untested.
+        Reports that they **work** are just as valuable as bug reports — this helps us
+        promote a platform to ✅ Tested in the README.
+  - type: dropdown
+    id: os
+    attributes:
+      label: Platform tested
+      options:
+        - macOS
+        - Linux (X11)
+        - Linux (Wayland)
+        - WSL
+    validations:
+      required: true
+  - type: input
+    id: details
+    attributes:
+      label: OS / desktop details
+      placeholder: "macOS 14.5 / Ubuntu 24.04 GNOME Wayland / WSL2 Ubuntu on Win11"
+    validations:
+      required: true
+  - type: input
+    id: tools
+    attributes:
+      label: Screenshot tool(s) present
+      description: e.g. grim, gnome-screenshot, import, xdotool, screencapture
+  - type: checkboxes
+    id: results
+    attributes:
+      label: What worked?
+      options:
+        - label: "`pytest tests/ -v` passes"
+        - label: "`screensight on && screensight capture` produced a valid downscaled JPEG"
+        - label: "Blocklist refused a capture when the active window matched"
+        - label: "`screensight watch` ran, updated daemon.json, and auto-stopped"
+        - label: "`screensight off` deleted the frame"
+        - label: "`screensight displays` listed monitors correctly"
+        - label: "`screensight-mcp` started and exposed all 8 tools"
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything broken or surprising?
+      render: shell

@@ -3,16 +3,15 @@
 Every tool docstring is written for the *calling agent* (AGENTS.md rule 8)
 — treat them as man-page entries, not code comments.
 """
+
 from __future__ import annotations
 
-import base64
 from pathlib import Path
 
 from fastmcp import FastMCP
 from fastmcp.utilities.types import Image
 
 from . import core, state, watch
-from .config import DAEMON_STATUS_FILE, FRAME_PATH
 
 mcp = FastMCP(
     "screensight",
@@ -26,6 +25,7 @@ mcp = FastMCP(
 
 
 # ── 1. screen_enable ──────────────────────────────────────────────────
+
 
 @mcp.tool()
 def screen_enable() -> str:
@@ -44,6 +44,7 @@ def screen_enable() -> str:
 
 # ── 2. screen_disable ─────────────────────────────────────────────────
 
+
 @mcp.tool()
 def screen_disable() -> str:
     """Turn OFF the ScreenSight master switch.
@@ -61,6 +62,7 @@ def screen_disable() -> str:
 
 # ── 3. screen_status ──────────────────────────────────────────────────
 
+
 @mcp.tool()
 def screen_status() -> str:
     """Check whether ScreenSight's master switch is on or off.
@@ -75,7 +77,8 @@ def screen_status() -> str:
 
 # ── 4. screen_capture ─────────────────────────────────────────────────
 
-@mcp.tool()
+
+@mcp.tool(output_schema=None)
 def screen_capture(
     question: str = "",
     display: int | None = None,
@@ -126,6 +129,7 @@ def screen_capture(
 
 # ── 5. screen_watch_start ─────────────────────────────────────────────
 
+
 @mcp.tool()
 def screen_watch_start(
     interval: int = 5,
@@ -150,6 +154,7 @@ def screen_watch_start(
 
 # ── 6. screen_watch_stop ──────────────────────────────────────────────
 
+
 @mcp.tool()
 def screen_watch_stop() -> str:
     """Stop a running watch daemon.
@@ -162,6 +167,7 @@ def screen_watch_stop() -> str:
 
 
 # ── 7. screen_watch_latest ────────────────────────────────────────────
+
 
 @mcp.tool()
 def screen_watch_latest() -> str:
@@ -196,6 +202,7 @@ def screen_watch_latest() -> str:
 
 # ── 8. screen_list_displays ───────────────────────────────────────────
 
+
 @mcp.tool()
 def screen_list_displays() -> str:
     """List all available displays/monitors.
@@ -219,6 +226,7 @@ def screen_list_displays() -> str:
 
 
 # ── Entry point ───────────────────────────────────────────────────────
+
 
 def run() -> None:
     """Entry point for the `screensight-mcp` console script."""

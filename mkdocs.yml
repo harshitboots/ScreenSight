@@ -1,0 +1,128 @@
+site_name: ScreenSight
+site_description: Let any coding agent see your screen — MCP server, CLI, and watch daemon.
+site_url: https://harshitboots.github.io/ScreenSight/
+repo_url: https://github.com/harshitboots/ScreenSight
+repo_name: harshitboots/ScreenSight
+edit_uri: edit/main/docs/
+copyright: MIT licensed · Built with MkDocs Material
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  custom_dir: docs/overrides
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/harshitboots/ScreenSight
+      name: ScreenSight on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/screensight/
+      name: screensight on PyPI
+  generator: false
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Link to this section
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Get started:
+      - Overview: get-started/index.md
+      - Installation: get-started/installation.md
+      - Quickstart: get-started/quickstart.md
+      - Agent setup: get-started/agent-setup.md
+  - Integration: integration.md
+  - Reference:
+      - CLI: reference/cli.md
+      - MCP tools: reference/mcp-tools.md
+      - Watch mode: reference/watch-mode.md
+      - Configuration: reference/configuration.md
+  - Privacy: privacy.md
+  - Architecture: architecture.md
+  - Help:
+      - Troubleshooting: help/troubleshooting.md
+      - Development: help/development.md

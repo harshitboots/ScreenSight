@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  <meta name="theme-color" content="#1c3c3c">
+  <meta property="og:title" content="{{ page.title | default(config.site_name) }} — {{ config.site_name }}">
+  <meta property="og:description" content="{{ config.site_description }}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+{% endblock %}

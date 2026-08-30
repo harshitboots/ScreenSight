@@ -12,6 +12,8 @@ ScreenSight generalizes screen-awareness beyond a single agent. It ships as:
 
 Inspired by [ScreenPipe](https://github.com/mediar-ai/screenpipe) — this is the agent-agnostic version.
 
+📖 **Full documentation: [harshitboots.github.io/ScreenSight](https://harshitboots.github.io/ScreenSight/)**
+
 ## Install
 
 ### From source (recommended)
@@ -289,6 +291,20 @@ powershell.exe -NoProfile -Command "echo hello"
 wslpath -u "C:\\Users"
 ```
 
+## Contributing
+
+Contributions are welcome — bug fixes, backend improvements, and especially
+**test reports from macOS / Linux / WSL** (all currently ⚠️ untested).
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the test workflow, and the six privacy invariants
+- [PROJECT.md](PROJECT.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [AGENTS.md](AGENTS.md) explain the design
+- Report bugs or platform results via the [issue templates](.github/ISSUE_TEMPLATE)
+- Security issues: see [SECURITY.md](SECURITY.md) (report privately, not in public issues)
+- Need help? See [SUPPORT.md](SUPPORT.md)
+
+By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
 MIT
+

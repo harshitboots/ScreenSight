@@ -1,10 +1,8 @@
 """Tests for the master on/off switch (state.py)."""
+
 from __future__ import annotations
 
-import json
-
 from screensight import state
-from screensight.config import STATE_FILE, ensure_base_dir
 
 
 def test_initial_state_is_off(tmp_path, monkeypatch):

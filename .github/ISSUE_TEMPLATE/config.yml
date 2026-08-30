@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / usage help
+    url: https://github.com/himanshu231204/ScreenSight/discussions
+    about: Ask how to set up or use ScreenSight. Please don't file a bug for usage questions.
+  - name: Security vulnerability
+    url: https://github.com/himanshu231204/ScreenSight/security/advisories/new
+    about: Report privately. Do NOT open a public issue for security problems (see SECURITY.md).
+  - name: Troubleshooting guide
+    url: https://github.com/himanshu231204/ScreenSight/blob/main/GUIDE.md#troubleshooting
+    about: Common failures and fixes before you file a bug.

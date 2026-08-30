@@ -1,0 +1,51 @@
+name: Feature request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check
+        [PROJECT.md → "Explicitly out of scope for v1"](../blob/main/PROJECT.md)
+        first — OCR-based sensitive-content detection, region-of-interest capture,
+        and a GUI settings app are intentionally deferred.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The use case, not just the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface(s) would this touch?
+      multiple: true
+      options:
+        - CLI
+        - MCP server
+        - Watch daemon
+        - Capture backend (macOS/Linux/Windows)
+        - Privacy layer (blocklist / redaction)
+        - Docs / examples
+    validations:
+      required: true
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Privacy invariants
+      description: See PROJECT.md and CONTRIBUTING.md.
+      options:
+        - label: This proposal preserves all six privacy invariants (off by default, single capture choke point, no silent weakening of blocklist/redaction, no frame accumulation, cross-platform parity, minimal runtime deps).
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

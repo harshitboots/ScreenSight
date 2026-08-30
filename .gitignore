@@ -8,4 +8,8 @@ build/
 .screensight/
 .tmp/
 .opencode/
+.claude/
 TASKS.md
+
+# MkDocs build output
+site/

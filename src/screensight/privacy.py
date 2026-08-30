@@ -10,17 +10,15 @@ Neither layer is a substitute for the master switch — turn screensight off
 before doing anything sensitive. This just catches the "forgot to turn it
 off" case.
 """
-from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
+from __future__ import annotations
 
 from PIL import Image
 
 from .config import MAX_LONG_EDGE, load_redact_config
 
 
-def title_is_blocked(title: Optional[str]) -> bool:
+def title_is_blocked(title: str | None) -> bool:
     if not title:
         return False
     cfg = load_redact_config()
@@ -47,6 +45,7 @@ def process_frame(path: str) -> None:
 
         if zones:
             from PIL import ImageDraw
+
             draw = ImageDraw.Draw(img)
             for z in zones:
                 draw.rectangle([z["x"], z["y"], z["x"] + z["w"], z["y"] + z["h"]], fill="black")

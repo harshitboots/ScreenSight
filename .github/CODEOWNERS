@@ -1,0 +1,8 @@
+# Default owner for everything in the repo.
+* @harshitboots
+
+# The capture choke point and privacy layer carry the safety invariants —
+# changes here warrant extra scrutiny.
+/src/screensight/core.py       @harshitboots
+/src/screensight/privacy.py    @harshitboots
+/src/screensight/state.py      @harshitboots

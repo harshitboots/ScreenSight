@@ -2,6 +2,7 @@
 pixel unless this file says 'on' — checked at the point of capture itself,
 not just in whichever prompt/tool description an agent happens to read.
 """
+
 from __future__ import annotations
 
 import json

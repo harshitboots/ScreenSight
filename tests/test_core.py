@@ -1,7 +1,7 @@
 """Tests for the capture_once() pipeline with mocked backends."""
+
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from screensight import core, state
@@ -40,7 +40,6 @@ def test_switch_off_short_circuits(tmp_path, monkeypatch):
     monkeypatch.setattr(core, "FRAME_PATH", tmp_path / "frame.jpg")
 
     called = []
-    original_backend = core.get_backend
 
     def tracking_backend():
         called.append(True)
@@ -62,7 +61,8 @@ def test_blocklisted_title_deletes_frame(tmp_path, monkeypatch):
     state.turn_on()
 
     monkeypatch.setattr(
-        core, "get_backend",
+        core,
+        "get_backend",
         lambda: _make_mock_backend(title="1Password - Unlock"),
     )
 
@@ -80,7 +80,8 @@ def test_successful_capture(tmp_path, monkeypatch):
     state.turn_on()
 
     monkeypatch.setattr(
-        core, "get_backend",
+        core,
+        "get_backend",
         lambda: _make_mock_backend(title="VS Code"),
     )
 

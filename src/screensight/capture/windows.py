@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
-from typing import Optional
 
 from ..config import WSL_PATH_CONVERT_TIMEOUT, WSL_TEMP_DIR_TIMEOUT
 from .base import CaptureBackend, CaptureResult
@@ -119,15 +117,20 @@ Write-Output $sb.ToString()
 
 
 class WindowsCapture(CaptureBackend):
-    def screenshot(self, out_path: str, display: Optional[int] = None) -> CaptureResult:
+    def screenshot(self, out_path: str, display: int | None = None) -> CaptureResult:
         script = _PS_SCRIPT.replace("{out_path}", out_path.replace("\\", "\\\\"))
         try:
             proc = subprocess.run(
                 ["powershell.exe", "-NoProfile", "-Command", script],
-                capture_output=True, text=True, timeout=20,
+                capture_output=True,
+                text=True,
+                timeout=20,
+                check=False,
             )
             if proc.returncode != 0:
-                return CaptureResult(ok=False, error=proc.stderr.strip() or "PowerShell capture failed")
+                return CaptureResult(
+                    ok=False, error=proc.stderr.strip() or "PowerShell capture failed"
+                )
             title = proc.stdout.strip() or None
             return CaptureResult(ok=True, path=out_path, active_window_title=title)
         except FileNotFoundError:
@@ -205,7 +208,6 @@ class WSLCapture(WindowsCapture):
             win_tmp = get_windows_temp_dir()
         except RuntimeError as e:
             return CaptureResult(ok=False, error=str(e))
-        
         win_out = f"{win_tmp}\\screensight-frame.jpg"
         
         # Capture using Windows backend (writes to Windows filesystem)
