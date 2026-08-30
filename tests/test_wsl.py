@@ -218,10 +218,14 @@ class TestWSLCapture:
             "screensight.capture.windows.subprocess.run",
             _mock_subprocess_run(responses),
         )
-        # Patch shutil.which in the windows module
+        # Patch shutil.which in the windows module (must handle both powershell.exe and wslpath)
         import screensight.capture.windows as win_module
         original_which = win_module.shutil.which
-        win_module.shutil.which = lambda x: "powershell.exe" if x == "powershell.exe" else None
+        def fake_which(name):
+            if name in ("powershell.exe", "wslpath"):
+                return name
+            return None
+        win_module.shutil.which = fake_which
 
         # Create the WSL path file (simulating Windows capture)
         Path(wsl_out).parent.mkdir(parents=True, exist_ok=True)
@@ -328,10 +332,14 @@ class TestWSLCapture:
             "screensight.capture.windows.subprocess.run",
             _mock_subprocess_run(responses),
         )
-        # Patch shutil.which in the windows module
+        # Patch shutil.which in the windows module (must handle both powershell.exe and wslpath)
         import screensight.capture.windows as win_module
         original_which = win_module.shutil.which
-        win_module.shutil.which = lambda x: "powershell.exe" if x == "powershell.exe" else None
+        def fake_which(name):
+            if name in ("powershell.exe", "wslpath"):
+                return name
+            return None
+        win_module.shutil.which = fake_which
 
         capture = WSLCapture()
         result = capture.screenshot(out_path)
