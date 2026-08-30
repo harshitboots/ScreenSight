@@ -2,10 +2,18 @@
 from __future__ import annotations
 
 import json
+import platform
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# Skip all tests in this module on non-Windows platforms
+# WSL capture is Windows-specific functionality
+pytestmark = pytest.mark.skipif(
+    platform.system() != "Windows",
+    reason="WSL capture tests require Windows (powershell.exe, wslpath)"
+)
 
 from screensight.capture.base import CaptureBackend, CaptureResult
 from screensight.capture.windows import (
