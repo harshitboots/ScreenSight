@@ -20,6 +20,11 @@ DEFAULT_WATCH_INTERVAL = 5     # seconds
 MAX_FRAMES_PER_WATCH = 10      # hard cap so a forgotten daemon can't burn context/tokens
 AUTO_OFF_ON_WATCH_END = True
 
+# WSL-specific timeouts (PowerShell via WSL is slower than native Windows)
+WSL_CAPTURE_TIMEOUT = 30       # seconds — PowerShell capture from WSL
+WSL_PATH_CONVERT_TIMEOUT = 5   # seconds — wslpath conversion
+WSL_TEMP_DIR_TIMEOUT = 10      # seconds — getting $env:TEMP from PowerShell
+
 # Window/app titles that cause capture to be skipped outright (case-insensitive substrings).
 # User can extend this in ~/.screensight/redact_zones.json -> "blocklist": [...]
 DEFAULT_TITLE_BLOCKLIST = [
