@@ -10,7 +10,7 @@ from .base import CaptureBackend, CaptureResult
 
 def is_wsl2() -> bool:
     """Detect if running inside WSL2 (vs WSL1 or native Linux).
-    
+
     WSL2 uses a real Linux kernel with a lightweight VM, while WSL1
     is a syscall translation layer. Path translation works differently
     between them.
@@ -18,7 +18,10 @@ def is_wsl2() -> bool:
     try:
         proc = subprocess.run(
             ["wsl.exe", "--list", "--verbose"],
-            capture_output=True, text=True, timeout=5, check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
         )
         # WSL2 output contains version info; look for version 2
         # Output format: "  Ubuntu    Running    2"
@@ -29,15 +32,18 @@ def is_wsl2() -> bool:
 
 def win_to_wsl_path(win_path: str) -> str:
     """Convert a Windows path (C:\\Users\\...) to WSL path (/mnt/c/Users/...).
-    
+
     Requires wslpath utility (included in WSL2 distributions).
     """
     if not shutil.which("wslpath"):
         raise RuntimeError("wslpath not found — required for WSL path translation")
-    
+
     proc = subprocess.run(
         ["wslpath", "-u", win_path],
-        capture_output=True, text=True, timeout=WSL_PATH_CONVERT_TIMEOUT, check=False,
+        capture_output=True,
+        text=True,
+        timeout=WSL_PATH_CONVERT_TIMEOUT,
+        check=False,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"wslpath failed: {proc.stderr.strip()}")
@@ -46,15 +52,18 @@ def win_to_wsl_path(win_path: str) -> str:
 
 def wsl_to_win_path(wsl_path: str) -> str:
     """Convert a WSL path (/mnt/c/...) to Windows path (C:\\Users\\...).
-    
+
     Requires wslpath utility (included in WSL2 distributions).
     """
     if not shutil.which("wslpath"):
         raise RuntimeError("wslpath not found — required for WSL path translation")
-    
+
     proc = subprocess.run(
         ["wslpath", "-w", wsl_path],
-        capture_output=True, text=True, timeout=WSL_PATH_CONVERT_TIMEOUT, check=False,
+        capture_output=True,
+        text=True,
+        timeout=WSL_PATH_CONVERT_TIMEOUT,
+        check=False,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"wslpath failed: {proc.stderr.strip()}")
@@ -63,16 +72,20 @@ def wsl_to_win_path(wsl_path: str) -> str:
 
 def get_windows_temp_dir() -> str:
     """Get the Windows TEMP directory from inside WSL.
-    
+
     Uses powershell.exe to read $env:TEMP, which returns the Windows path.
     """
     proc = subprocess.run(
         ["powershell.exe", "-NoProfile", "-Command", "$env:TEMP"],
-        capture_output=True, text=True, timeout=WSL_TEMP_DIR_TIMEOUT, check=False,
+        capture_output=True,
+        text=True,
+        timeout=WSL_TEMP_DIR_TIMEOUT,
+        check=False,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"Failed to get Windows TEMP dir: {proc.stderr.strip()}")
     return proc.stdout.strip()
+
 
 _PS_SCRIPT = r"""
 Add-Type -AssemblyName System.Windows.Forms
@@ -140,14 +153,17 @@ class WindowsCapture(CaptureBackend):
 
     def active_window_title(self) -> str | None:
         """Get the active window title via PowerShell DllImport.
-        
+
         Returns None if PowerShell invocation fails — callers must treat
         None as 'unknown', not 'safe'.
         """
         try:
             proc = subprocess.run(
                 ["powershell.exe", "-NoProfile", "-Command", _PS_TITLE_SCRIPT],
-                capture_output=True, text=True, timeout=10, check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
             )
             if proc.returncode == 0 and proc.stdout.strip():
                 return proc.stdout.strip()
@@ -168,18 +184,23 @@ class WindowsCapture(CaptureBackend):
         try:
             proc = subprocess.run(
                 ["powershell.exe", "-NoProfile", "-Command", script],
-                capture_output=True, text=True, timeout=10, check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
             )
             if proc.returncode == 0 and proc.stdout.strip():
                 displays = []
                 for line in proc.stdout.strip().splitlines():
                     parts = line.split("|")
                     if len(parts) == 3:
-                        displays.append({
-                            "index": int(parts[0]),
-                            "name": parts[1].strip("\\"),
-                            "resolution": parts[2],
-                        })
+                        displays.append(
+                            {
+                                "index": int(parts[0]),
+                                "name": parts[1].strip("\\"),
+                                "resolution": parts[2],
+                            }
+                        )
                 return displays or [{"index": 0, "name": "primary"}]
         except Exception:
             pass
@@ -189,7 +210,7 @@ class WindowsCapture(CaptureBackend):
 class WSLCapture(WindowsCapture):
     """From inside WSL, capture the real Windows desktop, then copy the
     result back across the filesystem boundary into WSL's temp dir.
-    
+
     Requirements:
     - WSL2 (not WSL1) with wslpath utility
     - powershell.exe accessible from WSL PATH
@@ -200,41 +221,39 @@ class WSLCapture(WindowsCapture):
         # Check for required tools
         if not shutil.which("powershell.exe"):
             return CaptureResult(
-                ok=False,
-                error="powershell.exe not found — required for WSL capture"
+                ok=False, error="powershell.exe not found — required for WSL capture"
             )
-        
+
         try:
             win_tmp = get_windows_temp_dir()
         except RuntimeError as e:
             return CaptureResult(ok=False, error=str(e))
         win_out = f"{win_tmp}\\screensight-frame.jpg"
-        
+
         # Capture using Windows backend (writes to Windows filesystem)
         result = super().screenshot(win_out, display)
         if not result.ok:
             return result
-        
+
         # Convert Windows path to WSL path and copy across filesystem boundary
         try:
             wsl_path = win_to_wsl_path(win_out)
         except RuntimeError as e:
             return CaptureResult(ok=False, error=f"Path translation failed: {e}")
-        
+
         try:
             wsl_path_obj = Path(wsl_path)
             if not wsl_path_obj.exists():
                 return CaptureResult(
-                    ok=False,
-                    error=f"Captured file not found at WSL path: {wsl_path}"
+                    ok=False, error=f"Captured file not found at WSL path: {wsl_path}"
                 )
-            
+
             # Copy bytes across filesystem boundary
             Path(out_path).write_bytes(wsl_path_obj.read_bytes())
-            
+
             # Clean up Windows temp file
             wsl_path_obj.unlink(missing_ok=True)
-            
+
             return CaptureResult(
                 ok=True,
                 path=out_path,
@@ -245,7 +264,7 @@ class WSLCapture(WindowsCapture):
 
     def active_window_title(self) -> str | None:
         """Get the active window title from Windows host.
-        
+
         Tries PowerShell DllImport first (works in most WSL2 setups).
         Falls back to None if PowerShell invocation fails.
         """

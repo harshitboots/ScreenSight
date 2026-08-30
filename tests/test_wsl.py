@@ -1,4 +1,5 @@
 """Tests for WSL capture backend with mocked subprocess calls."""
+
 from __future__ import annotations
 
 import platform
@@ -11,7 +12,7 @@ import pytest
 # WSL capture is Windows-specific functionality
 pytestmark = pytest.mark.skipif(
     platform.system() != "Windows",
-    reason="WSL capture tests require Windows (powershell.exe, wslpath)"
+    reason="WSL capture tests require Windows (powershell.exe, wslpath)",
 )
 
 from screensight.capture.base import CaptureBackend
@@ -35,10 +36,11 @@ def _write_real_jpeg(path: Path) -> None:
 
 def _mock_subprocess_run(responses: dict):
     """Create a mock for subprocess.run that returns predefined responses.
-    
+
     Args:
         responses: dict mapping command prefixes to (returncode, stdout, stderr) tuples
     """
+
     def mock_run(cmd, *args, **kwargs):
         cmd_str = " ".join(cmd) if isinstance(cmd, list) else cmd
         for prefix, (returncode, stdout, stderr) in responses.items():
@@ -54,7 +56,7 @@ def _mock_subprocess_run(responses: dict):
         result.stdout = ""
         result.stderr = f"Command not found: {cmd_str}"
         return result
-    
+
     return mock_run
 
 
@@ -70,9 +72,11 @@ class TestWinToWslPath:
         """Convert Windows path to WSL path."""
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "wslpath -u": (0, "/mnt/c/Users/test/temp", ""),
-            }),
+            _mock_subprocess_run(
+                {
+                    "wslpath -u": (0, "/mnt/c/Users/test/temp", ""),
+                }
+            ),
         )
         monkeypatch.setattr(
             "shutil.which",
@@ -98,9 +102,11 @@ class TestWinToWslPath:
         )
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "wslpath -u": (1, "", "invalid path"),
-            }),
+            _mock_subprocess_run(
+                {
+                    "wslpath -u": (1, "", "invalid path"),
+                }
+            ),
         )
         with pytest.raises(RuntimeError, match="wslpath failed"):
             win_to_wsl_path("invalid\\path")
@@ -113,9 +119,11 @@ class TestWslToWinPath:
         """Convert WSL path to Windows path."""
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "wslpath -w": (0, "C:\\Users\\test\\temp", ""),
-            }),
+            _mock_subprocess_run(
+                {
+                    "wslpath -w": (0, "C:\\Users\\test\\temp", ""),
+                }
+            ),
         )
         monkeypatch.setattr(
             "shutil.which",
@@ -141,9 +149,11 @@ class TestGetWindowsTempDir:
         """Get Windows TEMP directory."""
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "powershell.exe": (0, "C:\\Users\\test\\AppData\\Local\\Temp", ""),
-            }),
+            _mock_subprocess_run(
+                {
+                    "powershell.exe": (0, "C:\\Users\\test\\AppData\\Local\\Temp", ""),
+                }
+            ),
         )
         result = get_windows_temp_dir()
         assert result == "C:\\Users\\test\\AppData\\Local\\Temp"
@@ -152,9 +162,11 @@ class TestGetWindowsTempDir:
         """Error when PowerShell fails."""
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "powershell.exe": (1, "", "access denied"),
-            }),
+            _mock_subprocess_run(
+                {
+                    "powershell.exe": (1, "", "access denied"),
+                }
+            ),
         )
         with pytest.raises(RuntimeError, match="Failed to get Windows TEMP dir"):
             get_windows_temp_dir()
@@ -172,9 +184,11 @@ class TestIsWsl2:
         """Detect WSL2 from wsl.exe output."""
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "wsl.exe": (0, "  Ubuntu    Running    2", ""),
-            }),
+            _mock_subprocess_run(
+                {
+                    "wsl.exe": (0, "  Ubuntu    Running    2", ""),
+                }
+            ),
         )
         assert is_wsl2() is True
 
@@ -182,17 +196,20 @@ class TestIsWsl2:
         """Detect WSL1 from wsl.exe output."""
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "wsl.exe": (0, "  Ubuntu    Running    1", ""),
-            }),
+            _mock_subprocess_run(
+                {
+                    "wsl.exe": (0, "  Ubuntu    Running    1", ""),
+                }
+            ),
         )
         assert is_wsl2() is False
 
     def test_assume_wsl2_on_error(self, monkeypatch):
         """Assume WSL2 when wsl.exe fails."""
+
         def failing_run(cmd, *args, **kwargs):
             raise OSError("wsl.exe not found")
-        
+
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
             failing_run,
@@ -226,11 +243,14 @@ class TestWSLCapture:
         )
         # Patch shutil.which in the windows module (must handle both powershell.exe and wslpath)
         import screensight.capture.windows as win_module
+
         original_which = win_module.shutil.which
+
         def fake_which(name):
             if name in ("powershell.exe", "wslpath"):
                 return name
             return None
+
         win_module.shutil.which = fake_which
 
         # Create the WSL path file (simulating Windows capture)
@@ -275,9 +295,11 @@ class TestWSLCapture:
         )
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "powershell.exe": (1, "", "access denied"),
-            }),
+            _mock_subprocess_run(
+                {
+                    "powershell.exe": (1, "", "access denied"),
+                }
+            ),
         )
 
         capture = WSLCapture()
@@ -340,11 +362,14 @@ class TestWSLCapture:
         )
         # Patch shutil.which in the windows module (must handle both powershell.exe and wslpath)
         import screensight.capture.windows as win_module
+
         original_which = win_module.shutil.which
+
         def fake_which(name):
             if name in ("powershell.exe", "wslpath"):
                 return name
             return None
+
         win_module.shutil.which = fake_which
 
         capture = WSLCapture()
@@ -360,9 +385,11 @@ class TestWSLCapture:
         """Get active window title from WSL."""
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "powershell.exe": (0, "VS Code", ""),
-            }),
+            _mock_subprocess_run(
+                {
+                    "powershell.exe": (0, "VS Code", ""),
+                }
+            ),
         )
 
         capture = WSLCapture()
@@ -371,9 +398,10 @@ class TestWSLCapture:
 
     def test_active_window_title_fallback(self, monkeypatch):
         """Fallback to None when title extraction fails."""
+
         def failing_run(cmd, *args, **kwargs):
             raise OSError("PowerShell failed")
-        
+
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
             failing_run,
@@ -389,14 +417,16 @@ class TestWSLCapture:
         display_output = "0|\\\\.\\DISPLAY1|1920x1080\n1|\\\\.\\DISPLAY2|2560x1440"
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
-            _mock_subprocess_run({
-                "powershell.exe": (0, display_output, ""),
-            }),
+            _mock_subprocess_run(
+                {
+                    "powershell.exe": (0, display_output, ""),
+                }
+            ),
         )
 
         capture = WSLCapture()
         displays = capture.list_displays()
-        
+
         assert len(displays) == 2
         assert displays[0]["index"] == 0
         # The name will be stripped of leading backslashes by .strip("\\")
@@ -407,9 +437,10 @@ class TestWSLCapture:
 
     def test_list_displays_fallback(self, monkeypatch):
         """Fallback to primary display when listing fails."""
+
         def failing_run(cmd, *args, **kwargs):
             raise OSError("PowerShell failed")
-        
+
         monkeypatch.setattr(
             "screensight.capture.windows.subprocess.run",
             failing_run,
@@ -417,7 +448,7 @@ class TestWSLCapture:
 
         capture = WSLCapture()
         displays = capture.list_displays()
-        
+
         assert displays == [{"index": 0, "name": "primary"}]
 
 
@@ -434,7 +465,7 @@ class TestWSLBackendDispatch:
         from screensight.capture.base import get_backend
 
         monkeypatch.setattr("screensight.config.get_os", lambda: "wsl")
-        
+
         backend = get_backend()
         assert isinstance(backend, WSLCapture)
 
