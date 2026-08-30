@@ -212,6 +212,7 @@ tests/
   test_privacy.py      # Blocklist matching, zone scaling
   test_diff.py         # Hash stability, change detection
   test_core.py         # capture_once() with mocked backend
+  test_wsl.py          # WSL capture backend tests
 ```
 
 ## Comparison
@@ -255,7 +256,40 @@ fastmcp dev screensight.mcp_server:mcp   # Or via fastmcp dev
 | Windows | ✅ Tested | PowerShell + System.Drawing |
 | macOS | ⚠️ Untested | screencapture + osascript |
 | Linux | ⚠️ Untested | grim / gnome-screenshot / import + xdotool |
-| WSL | ⚠️ Untested | PowerShell (captures Windows desktop) |
+| WSL2 | ✅ Tested | PowerShell (captures Windows host desktop) |
+
+### WSL2 Support
+
+ScreenSight supports capturing the Windows host screen from inside WSL2. This requires:
+
+**Prerequisites:**
+- WSL2 (not WSL1) with a recent Ubuntu/Debian distribution
+- `powershell.exe` accessible from WSL PATH (usually automatic)
+- `wslpath` utility (included in most WSL2 distributions)
+
+**How it works:**
+1. Detects WSL environment via `platform.uname().release` containing "microsoft"
+2. Invokes `powershell.exe` to capture the Windows desktop using System.Drawing
+3. Converts the Windows temp path to WSL path via `wslpath`
+4. Copies the frame bytes across the filesystem boundary
+5. Cleans up the Windows temp file
+
+**Known limitations:**
+- WSL1 is not supported (different path translation mechanism)
+- Some display configurations may not list correctly
+- PowerShell execution policy may block scripts (use `-ExecutionPolicy Bypass` if needed)
+
+**Troubleshooting:**
+```bash
+# Verify WSL2 is running
+wsl.exe --list --verbose
+
+# Test PowerShell access from WSL
+powershell.exe -NoProfile -Command "echo hello"
+
+# Test wslpath
+wslpath -u "C:\\Users"
+```
 
 ## Contributing
 

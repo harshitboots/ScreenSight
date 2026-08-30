@@ -68,16 +68,18 @@ def test_all_eight_tools_registered():
     """ScreenSight must expose exactly 8 tools."""
     tools = _get_tools()
     names = sorted(t.name for t in tools)
-    expected = sorted([
-        "screen_enable",
-        "screen_disable",
-        "screen_status",
-        "screen_capture",
-        "screen_watch_start",
-        "screen_watch_stop",
-        "screen_watch_latest",
-        "screen_list_displays",
-    ])
+    expected = sorted(
+        [
+            "screen_enable",
+            "screen_disable",
+            "screen_status",
+            "screen_capture",
+            "screen_watch_start",
+            "screen_watch_stop",
+            "screen_watch_latest",
+            "screen_list_displays",
+        ]
+    )
     assert names == expected, f"Expected tools {expected}, got {names}"
 
 
