@@ -64,8 +64,8 @@ def test_other_tools_have_no_output_schema_conflict():
 # ── tool count ────────────────────────────────────────────────────────
 
 
-def test_all_eight_tools_registered():
-    """ScreenSight must expose exactly 8 tools."""
+def test_all_nine_tools_registered():
+    """ScreenSight must expose exactly 9 tools."""
     tools = _get_tools()
     names = sorted(t.name for t in tools)
     expected = sorted(
@@ -74,6 +74,7 @@ def test_all_eight_tools_registered():
             "screen_disable",
             "screen_status",
             "screen_capture",
+            "screen_capture_audio",
             "screen_watch_start",
             "screen_watch_stop",
             "screen_watch_latest",
@@ -81,6 +82,15 @@ def test_all_eight_tools_registered():
         ]
     )
     assert names == expected, f"Expected tools {expected}, got {names}"
+
+
+def test_screen_capture_audio_output_schema_is_none():
+    """screen_capture_audio returns audio + text content blocks, so like
+    screen_capture it must have output_schema=None."""
+    tool = _get_tool("screen_capture_audio")
+    assert tool.output_schema is None, (
+        f"screen_capture_audio.output_schema should be None, got {tool.output_schema!r}."
+    )
 
 
 # ── screen_capture content blocks (requires mocking) ──────────────────
@@ -126,6 +136,46 @@ def test_screen_capture_returns_content_blocks(tmp_path, monkeypatch):
     assert len(result.content) >= 2, f"Expected >=2 content blocks, got {len(result.content)}"
 
     # structured_content must be None (output_schema=None).
+    assert result.structured_content is None, (
+        f"structured_content should be None, got {result.structured_content!r}"
+    )
+
+
+def test_screen_capture_audio_returns_content_blocks(tmp_path, monkeypatch):
+    """screen_capture_audio should return content blocks (audio + text) with no
+    structured_content. Mock the audio pipeline so no hardware is touched."""
+    import wave
+    from pathlib import Path
+
+    from screensight import core, state
+    from screensight.capture.audio import AudioResult
+    from screensight.mcp_server import mcp as mcp_server
+
+    def _write_wav(path: Path) -> None:
+        with wave.open(str(path), "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(44100)
+            wav.writeframes(b"\x00\x00" * 44100)
+
+    def _fake_record(out_path, duration, sample_rate):
+        _write_wav(Path(out_path))
+        return AudioResult(
+            ok=True, path=out_path, duration=float(duration), sample_rate=sample_rate, channels=1
+        )
+
+    monkeypatch.setattr(state, "STATE_FILE", tmp_path / "state.json")
+    monkeypatch.setattr(core, "AUDIO_PATH", tmp_path / "audio.wav")
+    monkeypatch.setattr(core, "record_system_audio", _fake_record)
+    monkeypatch.setenv("SCREENSIGHT_ENABLE_AUDIO", "1")
+    state.turn_on()
+
+    tools = asyncio.run(mcp_server.list_tools())
+    audio_tool = next(t for t in tools if t.name == "screen_capture_audio")
+    result = asyncio.run(audio_tool.run({"duration": 2, "question": "what is playing?"}))
+
+    assert result.content is not None, "content should not be None"
+    assert len(result.content) >= 2, f"Expected >=2 content blocks, got {len(result.content)}"
     assert result.structured_content is None, (
         f"structured_content should be None, got {result.structured_content!r}"
     )

@@ -1,12 +1,14 @@
 # Configuration
 
 Everything ScreenSight stores lives under `~/.screensight/`. There is no global config
-file elsewhere, no environment-variable layer, and no remote state.
+file elsewhere and no remote state. The only environment variable is the opt-in audio gate
+described in [Audio capture](#audio-capture) below.
 
 ```text
 ~/.screensight/
   state.json          # Master on/off switch
   frame.jpg           # Latest captured frame
+  audio.wav           # Latest captured system audio (if audio is used)
   daemon.json         # Watch daemon status
   daemon.pid          # Watch daemon process ID
   redact_zones.json   # Blocklist + redaction zones
@@ -17,6 +19,7 @@ file elsewhere, no environment-variable layer, and no remote state.
 |---|---|---|---|
 | `state.json` | `state.py` | `core.py` | Master on/off switch |
 | `frame.jpg` | `core.py` via `privacy.process_frame` | CLI, MCP tools | The one current screenshot, overwritten each capture |
+| `audio.wav` | `core.py` via `capture.audio` | CLI, MCP tools | The one current audio recording, overwritten each capture |
 | `redact_zones.json` | You (or your agent) | `privacy.py` | Blocklist terms + redaction rectangles |
 | `daemon.json` | `watch.py` | CLI `watch-status`, MCP `screen_watch_latest` | Running state, frame count, last change |
 | `daemon.pid` | `watch.py` on start | `watch.py` on stop | Lets `watch-stop` find the process |
@@ -92,6 +95,37 @@ screensight status   # read
 screensight on       # enable
 screensight off      # disable + delete frame.jpg
 ```
+
+## Audio capture
+
+System-audio capture is **opt-in and off by default**. Two independent gates must both be
+satisfied before any audio is recorded:
+
+1. The master switch is on (`screensight on`).
+2. The `SCREENSIGHT_ENABLE_AUDIO` environment variable is set to `1` (or `true`/`yes`).
+
+```bash
+pip install 'screensight[audio]'   # soundcard + numpy
+export SCREENSIGHT_ENABLE_AUDIO=1
+screensight capture-audio --duration 5
+```
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SCREENSIGHT_ENABLE_AUDIO` | unset (off) | Must be `1`/`true`/`yes` to allow audio capture |
+| duration | `5` | Seconds per capture, clamped to `1`–`30` |
+| sample rate | `44100` Hz | Fixed |
+
+The recording is written to `~/.screensight/audio.wav` (a single reused file, like
+`frame.jpg`) and deleted on `screensight off`.
+
+**Loopback device support** — capture records what's playing through the default speaker:
+
+| Platform | Status |
+|---|---|
+| Windows | ✅ WASAPI loopback, works out of the box |
+| Linux | ✅ PulseAudio/PipeWire monitor source, works out of the box |
+| macOS / WSL | ⚠️ requires a virtual output device (BlackHole or SoundFlower) set as the default output |
 
 ## Resetting
 

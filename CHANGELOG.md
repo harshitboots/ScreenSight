@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **System-audio capture** ([#4](https://github.com/himanshu231204/ScreenSight/issues/4)) —
+  record the system's audio output (loopback) as a WAV:
+  - New `screen_capture_audio` MCP tool (9 tools total) returning the recording as an
+    audio content block.
+  - New `screensight capture-audio [--duration N]` CLI command.
+  - New optional dependency group `screensight[audio]` (`soundcard`, `numpy`).
+  - Opt-in and off by default: requires both the master switch on **and**
+    `SCREENSIGHT_ENABLE_AUDIO=1`. Duration is capped at 30s.
+  - `audio.wav` is cleaned up on `screensight off`, alongside `frame.jpg`.
+  - Loopback via `soundcard`: Windows (WASAPI) and Linux (PulseAudio monitor) work out of
+    the box; macOS/WSL need a virtual output device (BlackHole/SoundFlower).
+
 ## [0.1.0] - 2026-08-11
 
 Initial release. ScreenSight generalizes agent screen-awareness beyond a single
