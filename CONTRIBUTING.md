@@ -40,8 +40,8 @@ python -m venv .venv
 source .venv/bin/activate        # Linux/macOS
 .\.venv\Scripts\Activate.ps1     # Windows
 
-pip install -e .
-pip install pytest
+pip install -e ".[dev]"
+pre-commit install
 ```
 
 Verify the two entry points work:
@@ -71,6 +71,34 @@ When you add behavior, add a test for it. The existing suite covers:
 | `tests/test_privacy.py` | blocklist matching + redact-zone coordinate scaling |
 | `tests/test_diff.py` | SHA-256 hashing and change detection |
 | `tests/test_core.py` | `capture_once()` with a mocked backend |
+
+## Pre-commit hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to enforce code quality
+on every commit. Hooks run automatically when you commit — you can also run them
+manually:
+
+```bash
+# Run all hooks against all files
+pre-commit run --all-files
+
+# Run a specific hook
+pre-commit run ruff --all-files
+pre-commit run mypy --all-files
+```
+
+The configured hooks are:
+
+| Hook | What it does |
+|------|-------------|
+| `trailing-whitespace` | Strips trailing whitespace |
+| `end-of-file-fixer` | Ensures files end with a newline |
+| `check-yaml` | Validates YAML syntax |
+| `check-toml` | Validates TOML syntax |
+| `check-added-large-files` | Prevents files >500KB from being committed |
+| `ruff` | Lints and auto-fixes Python code |
+| `ruff-format` | Formats Python code |
+| `mypy` | Static type checking on `src/screensight/` |
 
 ## The six invariants (do not break these)
 
