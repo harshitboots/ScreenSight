@@ -12,6 +12,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+audio = [
+    "soundcard>=0.4.3",
+    "numpy>=1.24",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.16,<0.17",

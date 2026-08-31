@@ -6,6 +6,7 @@ Usage:
     screensight off
     screensight status
     screensight capture [--display N]
+    screensight capture-audio [--duration N]
     screensight watch [--interval N] [--max-frames N]
     screensight watch-stop
     screensight watch-status
@@ -19,6 +20,7 @@ import json
 import sys
 
 from . import core, state, watch
+from .config import DEFAULT_AUDIO_DURATION
 
 
 def cmd_on(args: argparse.Namespace) -> None:
@@ -46,6 +48,22 @@ def cmd_capture(args: argparse.Namespace) -> None:
                 "path": outcome.path,
                 "sha256": outcome.sha256,
                 "active_window_title": outcome.active_window_title,
+            }
+        )
+    )
+
+
+def cmd_capture_audio(args: argparse.Namespace) -> None:
+    outcome = core.capture_audio(duration=args.duration)
+    if not outcome.ok:
+        print(json.dumps({"error": outcome.error}), file=sys.stderr)
+        sys.exit(3)
+    print(
+        json.dumps(
+            {
+                "path": outcome.path,
+                "duration": outcome.duration,
+                "sample_rate": outcome.sample_rate,
             }
         )
     )
@@ -88,6 +106,14 @@ def main() -> None:
     cap = sub.add_parser("capture", help="Capture the current screen")
     cap.add_argument("--display", type=int, default=None, help="Display index (omit for primary)")
 
+    cap_audio = sub.add_parser("capture-audio", help="Record system audio output (loopback)")
+    cap_audio.add_argument(
+        "--duration",
+        type=int,
+        default=DEFAULT_AUDIO_DURATION,
+        help="Seconds of audio to record (default: %(default)s, max 30)",
+    )
+
     w = sub.add_parser("watch", help="Start a bounded watch session")
     w.add_argument(
         "--interval",
@@ -113,6 +139,7 @@ def main() -> None:
         "off": cmd_off,
         "status": cmd_status,
         "capture": cmd_capture,
+        "capture-audio": cmd_capture_audio,
         "watch": cmd_watch,
         "watch-stop": cmd_watch_stop,
         "watch-status": cmd_watch_status,

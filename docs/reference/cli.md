@@ -12,6 +12,8 @@ screensight off                         # Disable capture (deletes frame)
 screensight status                      # Check switch state
 screensight capture                     # Capture primary display
 screensight capture --display 1         # Capture specific display
+screensight capture-audio               # Record 5s of system audio (opt-in)
+screensight capture-audio --duration 10 # Record a specific duration
 screensight watch --interval 5          # Watch every 5s (default)
 screensight watch --interval 3 --max-frames 20
 screensight watch-stop                  # Stop watch daemon
@@ -53,6 +55,35 @@ screensight capture --display 1  # a specific display index
 !!! warning "A null title is not a safe title"
     When `active_window_title` is `null`, the backend could not determine the foreground
     window. Callers must treat that as *not verified safe*, never as *safe*.
+
+## `screensight capture-audio`
+
+Records the system's audio output (loopback — what's playing through the speakers) and
+prints a JSON object. **Opt-in:** the master switch must be on **and** the
+`SCREENSIGHT_ENABLE_AUDIO=1` environment variable must be set, otherwise the command exits
+with code `3`. Requires the audio extras: `pip install 'screensight[audio]'`.
+
+```bash
+export SCREENSIGHT_ENABLE_AUDIO=1
+screensight capture-audio                 # 5s (default)
+screensight capture-audio --duration 10   # 1–30s
+```
+
+```json
+{
+  "path": "C:\\Users\\you\\.screensight\\audio.wav",
+  "duration": 5.0,
+  "sample_rate": 44100
+}
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--duration` | `5` | Seconds of audio to record (clamped to 1–30) |
+
+Loopback support: Windows (WASAPI) and Linux (PulseAudio/PipeWire monitor) work out of the
+box. macOS and WSL need a virtual output device (BlackHole or SoundFlower) installed and set
+as the default output. The `audio.wav` file is deleted on `screensight off`.
 
 ## `screensight displays`
 

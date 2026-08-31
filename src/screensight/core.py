@@ -7,8 +7,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .capture.audio import record_system_audio
 from .capture.base import get_backend
-from .config import FRAME_PATH, ensure_base_dir
+from .config import (
+    AUDIO_PATH,
+    AUDIO_SAMPLE_RATE,
+    DEFAULT_AUDIO_DURATION,
+    FRAME_PATH,
+    MAX_AUDIO_DURATION,
+    audio_enabled,
+    ensure_base_dir,
+)
 from .diff import sha256_of_file
 from .privacy import process_frame, title_is_blocked
 from .state import is_on
@@ -21,6 +30,15 @@ class CaptureOutcome:
     sha256: str | None = None
     error: str | None = None
     active_window_title: str | None = None
+
+
+@dataclass
+class CaptureAudioOutcome:
+    ok: bool
+    path: str | None = None
+    error: str | None = None
+    duration: float | None = None
+    sample_rate: int | None = None
 
 
 def capture_once(display: int | None = None) -> CaptureOutcome:
@@ -50,6 +68,37 @@ def capture_once(display: int | None = None) -> CaptureOutcome:
         path=str(FRAME_PATH),
         sha256=digest,
         active_window_title=result.active_window_title,
+    )
+
+
+def capture_audio(duration: int | None = None) -> CaptureAudioOutcome:
+    """Record system audio output (loopback) to AUDIO_PATH as a WAV.
+
+    Gated twice: the master switch must be on (same as capture_once) AND audio
+    must be explicitly enabled via SCREENSIGHT_ENABLE_AUDIO — audio is never
+    recorded by default. Duration is clamped to [1, MAX_AUDIO_DURATION]."""
+    if not is_on():
+        return CaptureAudioOutcome(ok=False, error="off")
+    if not audio_enabled():
+        return CaptureAudioOutcome(
+            ok=False,
+            error="audio capture disabled (set SCREENSIGHT_ENABLE_AUDIO=1 to enable)",
+        )
+
+    if duration is None:
+        duration = DEFAULT_AUDIO_DURATION
+    duration = max(1, min(int(duration), MAX_AUDIO_DURATION))
+
+    ensure_base_dir()
+    result = record_system_audio(str(AUDIO_PATH), duration, AUDIO_SAMPLE_RATE)
+    if not result.ok:
+        return CaptureAudioOutcome(ok=False, error=result.error)
+
+    return CaptureAudioOutcome(
+        ok=True,
+        path=result.path,
+        duration=result.duration,
+        sample_rate=result.sample_rate,
     )
 
 
