@@ -58,7 +58,7 @@ screensight capture
 
 <a class="ss-card" href="reference/mcp-tools/">
 <span class="ss-card__title">:material-toolbox-outline: MCP tools</span>
-<span class="ss-card__body">All eight tools the server exposes, with inputs, outputs and example responses.</span>
+<span class="ss-card__body">All nine tools the server exposes, with inputs, outputs and example responses.</span>
 <span class="ss-card__meta">Read the reference →</span>
 </a>
 

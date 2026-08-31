@@ -23,6 +23,9 @@ pytest tests/ -v
 | `test_privacy.py` | Blocklist matching, zone scaling |
 | `test_diff.py` | Hash stability, change detection |
 | `test_core.py` | `capture_once()` with a mocked backend |
+| `test_audio.py` | Audio capture pipeline |
+| `test_mcp_server.py` | All 9 tools registered, output_schema, content blocks |
+| `test_wsl.py` | WSL path translation and capture |
 
 ## Run the MCP server
 
