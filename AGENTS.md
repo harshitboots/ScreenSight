@@ -15,7 +15,7 @@ Read `PROJECT.md` fully before writing code. It defines what's already built, wh
 5. **Cross-platform parity.** If you add a feature to one `capture/*.py` backend, add it (or a documented graceful fallback) to all three. `active_window_title()` returning `None` is a valid fallback — callers must already treat `None` as "unknown," never as "safe."
 6. **No new runtime dependencies without a reason.** Current deps: `fastmcp`, `pillow`. CLI uses stdlib `argparse`, not `click` — keep it that way unless there's a concrete need. Platform capture uses native OS tools via `subprocess`, never a screenshot pip package (keeps the "no extra app" property from the original).
 7. **Daemon must be a separate OS process, not a thread inside the MCP server.** MCP servers commonly run over stdio per-session; a daemon needs to outlive that. `watch.py` should be launchable via `subprocess.Popen(..., start_new_session=True)` from both the CLI and the MCP tool, writing its own pidfile (`config.DAEMON_PID_FILE`) so `screen_watch_stop` can find and kill it.
-8. **MCP tool docstrings are user-facing.** Whatever you write as a FastMCP `@mcp.tool()` docstring is what the calling agent sees to decide when to invoke it — write it like a man page entry, not a code comment.
+8. **MCP tool docstrings are user-facing.** The calling agent reads the docstring to decide when to invoke a tool — write it like a man page entry, not a code comment. Tools live in `src/screensight/tools/` split by domain (`control.py`, `screen.py`, `audio.py`, `watch.py`). Each module exports a `register(mcp: FastMCP) -> None` function; `mcp_server.py` is a thin orchestrator that calls `register_all(mcp)` from `tools/__init__.py`. To add a new tool, add the function to the appropriate domain module and register it there — do not add inline tools to `mcp_server.py`.
 
 ## Conventions
 
@@ -31,7 +31,7 @@ Build in this order — each step is independently testable before the next depe
 1. `watch.py` (daemon) — testable via CLI alone before MCP exists.
 2. `__main__.py` (CLI) — wire up `on/off/status/capture/watch/watch-stop/displays` against `core.py` and `watch.py`.
 3. Manually verify end-to-end on whatever OS you're running in (screenshot appears, blocklist works, watch daemon writes status file, `off` cleans up).
-4. `mcp_server.py` — thin FastMCP wrapper around the same functions the CLI already calls. If you're duplicating logic between CLI and MCP server, stop and extract it into `core.py` or `watch.py` instead.
+4. `tools/` sub-package — one module per domain (`control.py`, `screen.py`, `audio.py`, `watch.py`), each exporting a `register(mcp)` function. `mcp_server.py` is a thin orchestrator that calls `register_all(mcp)`. If you're duplicating logic between CLI and MCP server, stop and extract it into `core.py` or `watch.py` instead.
 5. `install.sh` / `install.ps1`.
 6. `skills/claude-code/SKILL.md` adapter.
 7. `README.md`.
@@ -42,7 +42,7 @@ Build in this order — each step is independently testable before the next depe
 - `pip install .` works from a clean venv.
 - `screensight on && screensight capture` produces a valid downscaled JPEG at `~/.screensight/frame.jpg` on macOS, Linux, and Windows/WSL (test whichever you have access to; note untested platforms in the PR description).
 - `screensight watch --interval 3` runs as a background process, updates `daemon.json` on change, stops itself after `MAX_FRAMES_PER_WATCH` frames or on `screensight watch-stop`, and turns the master switch off when it exits.
-- `screensight-mcp` starts and lists all 8 tools from `PROJECT.md` when queried via any MCP client (`fastmcp dev` or an actual agent).
+- `screensight-mcp` starts and lists all 9 tools when queried via any MCP client (`fastmcp dev` or an actual agent).
 - Renaming the active window to something in the blocklist (e.g. a terminal titled "1Password") causes `capture` to refuse and report why.
 - `screensight off` deletes `frame.jpg` if present.
 

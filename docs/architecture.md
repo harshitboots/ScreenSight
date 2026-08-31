@@ -64,9 +64,12 @@ flowchart TD
 
 - **CLI** (`__main__.py`) — synchronous, human- or shell-script-facing. Talks to `core.py`
   and `watch.py` directly, formats results as text.
-- **MCP server** (`mcp_server.py`) — agent-facing. Same calls as the CLI, wrapped as
-  FastMCP tools with agent-readable docstrings. Returns MCP `Image` content blocks, not
-  file paths, so the calling agent can look at the frame directly in its own context.
+- **MCP server** (`mcp_server.py`) — agent-facing. A thin orchestrator (~40 lines) that
+  creates the `FastMCP` instance and delegates registration to the `tools/` sub-package.
+  Returns MCP `Image` content blocks, not file paths, so the calling agent can look at the
+  frame directly in its own context. The nine tools are split by domain:
+  `tools/control.py` (enable/disable/status), `tools/screen.py` (capture + displays),
+  `tools/audio.py` (audio capture), `tools/watch.py` (daemon management).
 - **Watch daemon** (`watch.py`, run as a detached OS process) — the only surface that runs
   unattended. Owns the interval loop; CLI and MCP server both just start, stop and poll it
   rather than each implementing their own. This is why the daemon is a separate process
@@ -120,7 +123,13 @@ src/screensight/
   privacy.py           # Blocklist check, downscale + zone redaction
   diff.py              # SHA-256 hashing, change detection
   watch.py             # Daemon (start/stop/status + loop)
-  mcp_server.py        # FastMCP server (8 tools)
+  mcp_server.py        # FastMCP orchestrator — creates mcp, calls register_all()
+  tools/
+    __init__.py        # register_all(mcp) — wires all four domain modules
+    control.py         # screen_enable, screen_disable, screen_status
+    screen.py          # screen_capture, screen_list_displays
+    audio.py           # screen_capture_audio (+ _Audio fallback)
+    watch.py           # screen_watch_start, screen_watch_stop, screen_watch_latest
   capture/
     base.py            # CaptureBackend ABC + get_backend() OS dispatch
     macos.py           # macOS (screencapture + osascript)
@@ -132,4 +141,7 @@ tests/
   test_privacy.py      # Blocklist matching, zone scaling
   test_diff.py         # Hash stability, change detection
   test_core.py         # capture_once() with a mocked backend
+  test_audio.py        # Audio capture pipeline
+  test_mcp_server.py   # All 9 tools registered, output_schema, content blocks
+  test_wsl.py          # WSL path translation and capture
 ```
