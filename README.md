@@ -7,8 +7,8 @@ MCP server + CLI fallback + a standalone watch daemon. No API key required; runs
 ScreenSight generalizes screen-awareness beyond a single agent. It ships as:
 
 - **MCP server** — works in Cursor, Windsurf, Cline, Claude Code, Codex CLI, and any MCP-capable agent
-- **CLI** — works for Aider, raw shell agents, or any environment that can run a command
-- **Watch daemon** — a long-lived background process for interval capture with automatic stop
+- **CLI** works for Aider, raw shell agents, or any environment that can run a command
+- **Watch daemon**  a long-lived background process for interval capture with automatic stop
 
 Inspired by [ScreenPipe](https://github.com/mediar-ai/screenpipe) — this is the agent-agnostic version.
 
