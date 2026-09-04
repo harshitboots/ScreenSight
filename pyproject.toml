@@ -16,6 +16,9 @@ audio = [
     "soundcard>=0.4.3",
     "numpy>=1.24",
 ]
+pocketstation = [
+    "pocketstation>=0.1.3,<0.2",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.16,<0.17",

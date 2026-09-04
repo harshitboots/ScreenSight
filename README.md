@@ -66,7 +66,7 @@ Add this block to your agent's config file:
 | Codex CLI | `~/.codex/config.json` |
 | Aider / no MCP | No config needed — use the CLI directly |
 
-### MCP Tools (8 total)
+### MCP Tools (9 total)
 
 | Tool | Description |
 |------|-------------|
@@ -74,6 +74,7 @@ Add this block to your agent's config file:
 | `screen_disable` | Turn OFF the master switch |
 | `screen_status` | Check whether capture is enabled |
 | `screen_capture` | Capture screen, returns image + window title |
+| `screen_capture_audio` | Record system, app, or microphone audio |
 | `screen_watch_start` | Start bounded watch daemon |
 | `screen_watch_stop` | Stop watch daemon |
 | `screen_watch_latest` | Get daemon status and frame count |
@@ -87,12 +88,37 @@ screensight off                         # Disable capture (deletes frame)
 screensight status                      # Check switch state
 screensight capture                     # Capture primary display
 screensight capture --display 1         # Capture specific display
+screensight capture-audio               # Record system output (opt-in)
+screensight capture-audio --source application --application Zoom
+screensight capture-audio --source microphone
 screensight watch --interval 5          # Watch every 5s (default)
 screensight watch --interval 3 --max-frames 20
 screensight watch-stop                  # Stop watch daemon
 screensight watch-status                # Check daemon status
 screensight displays                    # List monitors
 ```
+
+### Audio capture
+
+Audio is off until you enable both ScreenSight and its separate audio switch:
+
+```bash
+screensight on
+export SCREENSIGHT_ENABLE_AUDIO=1
+```
+
+The existing system-output recorder remains available through
+`pip install 'screensight[audio]'`. For one desktop app or the default microphone, install
+the optional PocketStation recorder:
+
+```bash
+pip install 'screensight[pocketstation]'
+screensight capture-audio --source application --application Zoom
+```
+
+PocketStation captures the selected application directly on macOS, Windows, and Linux. It
+does not require BlackHole, Stereo Mix, or a PulseAudio monitor. Each call replaces
+`~/.screensight/audio.wav`, and `screensight off` deletes it.
 
 ### Example output
 
@@ -200,8 +226,9 @@ src/screensight/
   privacy.py           # Blocklist check, downscale + zone redaction
   diff.py              # SHA-256 hashing, change detection
   watch.py             # Daemon (start/stop/status + loop)
-  mcp_server.py        # FastMCP server (8 tools)
+  mcp_server.py        # FastMCP server (9 tools)
   capture/
+    audio.py           # System, application, and microphone recording
     base.py            # CaptureBackend ABC
     macos.py           # macOS (screencapture + osascript)
     linux.py           # Linux (grim / gnome-screenshot / import)
@@ -307,4 +334,3 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 ## License
 
 MIT
-

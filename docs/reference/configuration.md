@@ -1,8 +1,7 @@
 # Configuration
 
 Everything ScreenSight stores lives under `~/.screensight/`. There is no global config
-file elsewhere and no remote state. The only environment variable is the opt-in audio gate
-described in [Audio capture](#audio-capture) below.
+file elsewhere and no remote state. Audio has a separate opt-in switch described below.
 
 ```text
 ~/.screensight/
@@ -98,8 +97,8 @@ screensight off      # disable + delete frame.jpg
 
 ## Audio capture
 
-System-audio capture is **opt-in and off by default**. Two independent gates must both be
-satisfied before any audio is recorded:
+Audio capture is **opt-in and off by default**. Two independent switches must both permit a
+recording:
 
 1. The master switch is on (`screensight on`).
 2. The `SCREENSIGHT_ENABLE_AUDIO` environment variable is set to `1` (or `true`/`yes`).
@@ -108,13 +107,18 @@ satisfied before any audio is recorded:
 pip install 'screensight[audio]'   # soundcard + numpy
 export SCREENSIGHT_ENABLE_AUDIO=1
 screensight capture-audio --duration 5
+
+pip install 'screensight[pocketstation]'
+screensight capture-audio --source application --application Zoom
+screensight capture-audio --source microphone
 ```
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `SCREENSIGHT_ENABLE_AUDIO` | unset (off) | Must be `1`/`true`/`yes` to allow audio capture |
 | duration | `5` | Seconds per capture, clamped to `1`–`30` |
-| sample rate | `44100` Hz | Fixed |
+| source | `system` | System output, one application, or the default microphone |
+| sample rate | recorder-defined | `44100` Hz for system; `48000` Hz for PocketStation |
 
 The recording is written to `~/.screensight/audio.wav` (a single reused file, like
 `frame.jpg`) and deleted on `screensight off`.
@@ -126,6 +130,18 @@ The recording is written to `~/.screensight/audio.wav` (a single reused file, li
 | Windows | ✅ WASAPI loopback, works out of the box |
 | Linux | ✅ PulseAudio/PipeWire monitor source, works out of the box |
 | macOS / WSL | ⚠️ requires a virtual output device (BlackHole or SoundFlower) set as the default output |
+
+For one application, use PocketStation instead of changing the computer's default output:
+
+```bash
+screensight capture-audio --source application --application Zoom
+screensight capture-audio --source application --application bundle:us.zoom.xos
+screensight capture-audio --source application --application pid:1234
+```
+
+Display names must match one running application. Use a bundle ID when the display name is
+not unique, or a process ID for one exact running instance. Microphone capture uses the
+current default input device.
 
 ## Resetting
 

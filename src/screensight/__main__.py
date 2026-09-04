@@ -54,7 +54,11 @@ def cmd_capture(args: argparse.Namespace) -> None:
 
 
 def cmd_capture_audio(args: argparse.Namespace) -> None:
-    outcome = core.capture_audio(duration=args.duration)
+    outcome = core.capture_audio(
+        duration=args.duration,
+        source=args.source,
+        application=args.application,
+    )
     if not outcome.ok:
         print(json.dumps({"error": outcome.error}), file=sys.stderr)
         sys.exit(3)
@@ -64,6 +68,7 @@ def cmd_capture_audio(args: argparse.Namespace) -> None:
                 "path": outcome.path,
                 "duration": outcome.duration,
                 "sample_rate": outcome.sample_rate,
+                "source": outcome.source,
             }
         )
     )
@@ -106,12 +111,25 @@ def main() -> None:
     cap = sub.add_parser("capture", help="Capture the current screen")
     cap.add_argument("--display", type=int, default=None, help="Display index (omit for primary)")
 
-    cap_audio = sub.add_parser("capture-audio", help="Record system audio output (loopback)")
+    cap_audio = sub.add_parser(
+        "capture-audio", help="Record system, application, or microphone audio"
+    )
     cap_audio.add_argument(
         "--duration",
         type=int,
         default=DEFAULT_AUDIO_DURATION,
         help="Seconds of audio to record (default: %(default)s, max 30)",
+    )
+    cap_audio.add_argument(
+        "--source",
+        choices=("system", "application", "microphone"),
+        default="system",
+        help="Audio to record (default: %(default)s)",
+    )
+    cap_audio.add_argument(
+        "--application",
+        default=None,
+        help="Application name, bundle:<id>, or pid:<number> for --source application",
     )
 
     w = sub.add_parser("watch", help="Start a bounded watch session")

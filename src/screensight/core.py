@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .capture.audio import record_system_audio
+from .capture.audio import record_pocketstation_audio, record_system_audio
 from .capture.base import get_backend
 from .config import (
     AUDIO_PATH,
@@ -39,6 +39,7 @@ class CaptureAudioOutcome:
     error: str | None = None
     duration: float | None = None
     sample_rate: int | None = None
+    source: str | None = None
 
 
 def capture_once(display: int | None = None) -> CaptureOutcome:
@@ -71,8 +72,12 @@ def capture_once(display: int | None = None) -> CaptureOutcome:
     )
 
 
-def capture_audio(duration: int | None = None) -> CaptureAudioOutcome:
-    """Record system audio output (loopback) to AUDIO_PATH as a WAV.
+def capture_audio(
+    duration: int | None = None,
+    source: str = "system",
+    application: str | None = None,
+) -> CaptureAudioOutcome:
+    """Record system, application, or microphone audio to AUDIO_PATH as a WAV.
 
     Gated twice: the master switch must be on (same as capture_once) AND audio
     must be explicitly enabled via SCREENSIGHT_ENABLE_AUDIO — audio is never
@@ -89,8 +94,28 @@ def capture_audio(duration: int | None = None) -> CaptureAudioOutcome:
         duration = DEFAULT_AUDIO_DURATION
     duration = max(1, min(int(duration), MAX_AUDIO_DURATION))
 
+    source = source.strip().lower()
+    if source not in {"system", "application", "microphone"}:
+        return CaptureAudioOutcome(
+            ok=False,
+            error="audio source must be 'system', 'application', or 'microphone'",
+        )
+    if source == "application" and not (application or "").strip():
+        return CaptureAudioOutcome(
+            ok=False,
+            error="application is required when audio source is 'application'",
+        )
+
     ensure_base_dir()
-    result = record_system_audio(str(AUDIO_PATH), duration, AUDIO_SAMPLE_RATE)
+    if source == "system":
+        result = record_system_audio(str(AUDIO_PATH), duration, AUDIO_SAMPLE_RATE)
+    else:
+        result = record_pocketstation_audio(
+            str(AUDIO_PATH),
+            duration,
+            source,
+            application,
+        )
     if not result.ok:
         return CaptureAudioOutcome(ok=False, error=result.error)
 
@@ -99,6 +124,7 @@ def capture_audio(duration: int | None = None) -> CaptureAudioOutcome:
         path=result.path,
         duration=result.duration,
         sample_rate=result.sample_rate,
+        source=source,
     )
 
 
