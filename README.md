@@ -1,5 +1,7 @@
 # ScreenSight
 
+![ScreenSight](docs/images/thumbnail.png)
+
 **Let *any* coding agent see your screen — not just Claude Code.**
 
 MCP server + CLI fallback + a standalone watch daemon. No API key required; runs on whatever subscription/session the agent already has.
