@@ -15,13 +15,15 @@ from screensight import core
 
 def screen_capture_audio(
     duration: int = 5,
+    source: str = "system",
+    application: str = "",
     question: str = "",
 ) -> list:
-    """Record the system's audio output (what's playing through the speakers).
+    """Record system, application, or microphone audio.
 
-    Captures loopback audio — the sound the user is hearing (music, a video,
-    a call) — for `duration` seconds and returns it as an audio content block
-    you can listen to, plus text context.
+    Select `system` for the default speaker output, `application` for one
+    desktop application, or `microphone` for the default microphone. Application
+    capture accepts an exact display name, `bundle:<id>`, or `pid:<number>`.
 
     This is separate from screen_capture: audio is time-based, so this call
     blocks for roughly `duration` seconds while recording.
@@ -31,18 +33,23 @@ def screen_capture_audio(
     - Audio must be enabled by the user via the SCREENSIGHT_ENABLE_AUDIO=1
       environment variable — it is OFF by default for privacy.
 
-    Platform notes: Windows (WASAPI) and Linux (PulseAudio monitor) work out of
-    the box; macOS and WSL require a virtual loopback device (BlackHole /
-    SoundFlower) set as the default output.
+    System capture uses the existing soundcard recorder. Application and
+    microphone capture use the optional PocketStation integration.
 
     Args:
         duration: Seconds of audio to record (1–30, default 5).
+        source: Audio to record: system, application, or microphone.
+        application: Selector required only when source is application.
         question: Optional question to echo back for your context.
 
     Returns:
         Audio content block + text context (+ echoed question if given).
     """
-    outcome = core.capture_audio(duration=duration)
+    outcome = core.capture_audio(
+        duration=duration,
+        source=source,
+        application=application or None,
+    )
     if not outcome.ok:
         return [f"Audio capture failed: {outcome.error}"]
 
@@ -64,7 +71,7 @@ def screen_capture_audio(
         )
 
     text_parts = [
-        f"Recorded {outcome.duration}s of system audio at {outcome.sample_rate} Hz",
+        f"Recorded {outcome.duration}s of {outcome.source} audio at {outcome.sample_rate} Hz",
         f"Audio saved to: {outcome.path}",
     ]
     if question:

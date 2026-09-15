@@ -11,7 +11,7 @@ reading a file off disk.
 | [`screen_disable`](#screen_disable) | Turn OFF the master switch |
 | [`screen_status`](#screen_status) | Check whether capture is enabled |
 | [`screen_capture`](#screen_capture) | Capture screen, returns image + window title |
-| [`screen_capture_audio`](#screen_capture_audio) | Record system audio, returns audio block |
+| [`screen_capture_audio`](#screen_capture_audio) | Record system, app, or mic audio |
 | [`screen_watch_start`](#screen_watch_start) | Start the bounded watch daemon |
 | [`screen_watch_stop`](#screen_watch_stop) | Stop the watch daemon |
 | [`screen_watch_latest`](#screen_watch_latest) | Daemon status and frame count |
@@ -67,23 +67,28 @@ describe what it sees.
 
 ## screen_capture_audio
 
-Record the system's audio output (loopback) and return it to the agent.
+Record system output, one desktop application, or the default microphone and return it to
+the agent.
 
 ```text
 Input:
   - duration (default 5):  seconds to record (clamped to 1–30)
+  - source (default system): system, application, or microphone
+  - application: exact name, bundle:<id>, or pid:<number>; set only for application
   - question (optional):   text echoed back for context
 Output: Audio content block (WAV) + text with duration, sample rate and path
 ```
 
 **Opt-in and off by default.** Beyond the master switch, audio requires the
-`SCREENSIGHT_ENABLE_AUDIO=1` environment variable, and the server must be installed with the
-audio extras (`pip install 'screensight[audio]'`). If either is missing, the tool returns a
-clear `Audio capture failed: ...` message rather than recording.
+`SCREENSIGHT_ENABLE_AUDIO=1` environment variable. Install `screensight[audio]` for system
+output or `screensight[pocketstation]` for an application or microphone. If the selected
+recorder is unavailable, the tool explains what to install and does not change ScreenSight's
+existing system-audio behavior. `application` is required when `source=application` and is
+rejected for `system` and `microphone` so a selector is never silently ignored.
 
-Loopback works out of the box on Windows (WASAPI) and Linux (PulseAudio/PipeWire monitor);
-macOS and WSL need a virtual output device (BlackHole/SoundFlower). The `audio.wav` file is
-deleted on `screen_disable`.
+PocketStation application capture does not require BlackHole, SoundFlower, Stereo Mix, or a
+PulseAudio monitor. System capture remains available through the existing loopback recorder.
+The `audio.wav` file is deleted on `screen_disable`.
 
 !!! info "The switch is enforced below this tool"
     Like `screen_capture`, this tool calls into `core.capture_audio()`, which re-checks the

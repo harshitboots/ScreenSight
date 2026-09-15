@@ -1,8 +1,9 @@
-"""System-audio (loopback) capture — the audio counterpart to the screenshot
-backends. Kept in its own module because audio is time-based (a duration),
-not instantaneous like a screenshot, and because its dependencies
-(``soundcard``, ``numpy``) are optional extras that the core screenshot path
-must never import.
+"""Optional audio capture — the audio counterpart to the screenshot backends.
+
+System output uses ``soundcard``; one application or the default microphone
+uses PocketStation. This module stays separate because audio is time-based (a
+duration), not instantaneous like a screenshot, and because both recorders are
+optional dependencies that the core screenshot path must never import.
 
 Platform support via ``soundcard``:
 - Windows: WASAPI loopback works out of the box (records the default speaker).
@@ -18,14 +19,26 @@ degrade gracefully rather than raise, matching the rest of the package.
 
 from __future__ import annotations
 
+import json
+import shutil
+import struct
+import tempfile
+import time
 import wave
 from dataclasses import dataclass
+from pathlib import Path
+from types import ModuleType
+from typing import Any
 
 _DEPS_HINT = "audio deps not installed — run: pip install 'screensight[audio]'"
 _NO_LOOPBACK_HINT = (
     "no loopback audio device found — on macOS/WSL install a virtual output "
     "device (BlackHole or SoundFlower) and set it as the default output"
 )
+_POCKETSTATION_HINT = (
+    "PocketStation is not installed — run: pip install 'screensight[pocketstation]'"
+)
+_POCKETSTATION_SAMPLE_RATE = 48_000
 
 
 @dataclass
@@ -83,3 +96,165 @@ def record_system_audio(out_path: str, duration: float, sample_rate: int) -> Aud
         )
     except Exception as e:  # capture must fail closed, never raise
         return AudioResult(ok=False, error=f"audio capture failed: {e}")
+
+
+def record_pocketstation_audio(
+    out_path: str,
+    duration: float,
+    source: str,
+    application: str | None = None,
+) -> AudioResult:
+    """Record one application or the default microphone with PocketStation."""
+    try:
+        import pocketstation
+    except ImportError:
+        return AudioResult(ok=False, error=_POCKETSTATION_HINT)
+
+    try:
+        declaration = _pocketstation_source(pocketstation, source, application)
+        with tempfile.TemporaryDirectory(prefix="screensight-audio-") as directory:
+            session = pocketstation.Session(
+                recording_root=directory,
+                sample_rate_hz=_POCKETSTATION_SAMPLE_RATE,
+            )
+            stem = session.capture(declaration)
+            stem.record(source)
+            running = session.start()
+            try:
+                time.sleep(duration)
+                result = running.stop()
+            finally:
+                running.close()
+
+            recording = result.recording
+            if recording is None or not recording.complete:
+                return AudioResult(
+                    ok=False,
+                    error="PocketStation could not finish the audio recording",
+                )
+
+            captured = _recorded_stem_path(recording, source)
+            shutil.copyfile(captured, out_path)
+
+        sample_rate, channels = _read_wave_format(out_path)
+        return AudioResult(
+            ok=True,
+            path=out_path,
+            duration=float(duration),
+            sample_rate=sample_rate,
+            channels=channels,
+        )
+    except Exception as error:  # capture must fail closed, never raise
+        return AudioResult(ok=False, error=f"PocketStation audio capture failed: {error}")
+
+
+def _recorded_stem_path(recording: Any, stem_label: str) -> Path:
+    """Resolve one completed stem only through PocketStation's returned manifest."""
+    try:
+        session_directory = Path(recording.session_directory).resolve(strict=True)
+    except (AttributeError, FileNotFoundError, OSError) as error:
+        raise ValueError("PocketStation returned an invalid recording directory") from error
+
+    try:
+        manifest_path = Path(recording.manifest_path)
+    except (AttributeError, TypeError) as error:
+        raise ValueError("PocketStation did not return a recording manifest") from error
+    if not manifest_path.is_absolute():
+        manifest_path = session_directory / manifest_path
+    try:
+        manifest_path = manifest_path.resolve(strict=True)
+        manifest_path.relative_to(session_directory)
+    except (FileNotFoundError, OSError, ValueError) as error:
+        raise ValueError("PocketStation returned an invalid recording manifest path") from error
+    if not manifest_path.is_file():
+        raise ValueError("PocketStation did not return a readable recording manifest")
+
+    try:
+        with manifest_path.open(encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("PocketStation returned an unreadable recording manifest") from error
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("stems"), list):
+        raise TypeError("PocketStation returned an invalid recording manifest")
+
+    expected_schema = getattr(recording, "manifest_schema_version", None)
+    if expected_schema is not None and manifest.get("schema_version") != expected_schema:
+        raise ValueError("PocketStation recording manifest schema does not match its outcome")
+
+    matches = [
+        stem
+        for stem in manifest["stems"]
+        if isinstance(stem, dict) and stem.get("label") == stem_label
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"PocketStation manifest must contain exactly one {stem_label} recording")
+    stem = matches[0]
+    if stem.get("finalization_state") != "complete":
+        raise ValueError(f"PocketStation could not finish the {stem_label} recording")
+
+    declared_path = stem.get("wav_path")
+    if not isinstance(declared_path, str) or not declared_path.strip():
+        raise ValueError(f"PocketStation did not declare the {stem_label} recording path")
+    relative_path = Path(declared_path)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError(f"PocketStation returned an unsafe {stem_label} recording path")
+    try:
+        captured = (session_directory / relative_path).resolve(strict=True)
+        captured.relative_to(session_directory)
+    except FileNotFoundError as error:
+        raise ValueError(
+            f"PocketStation did not create the declared {stem_label} recording"
+        ) from error
+    except (OSError, ValueError) as error:
+        raise ValueError(f"PocketStation returned an unsafe {stem_label} recording path") from error
+    if not captured.is_file():
+        raise ValueError(f"PocketStation did not create the declared {stem_label} recording")
+    return captured
+
+
+def _pocketstation_source(
+    pocketstation: ModuleType,
+    source: str,
+    application: str | None,
+) -> Any:
+    if source == "microphone":
+        return pocketstation.Source.microphone_default()
+    if source != "application":
+        raise ValueError("PocketStation source must be 'application' or 'microphone'")
+
+    selected = "" if application is None else application.strip()
+    if not selected:
+        raise ValueError("application is required when source is 'application'")
+    process_id = selected.removeprefix("pid:")
+    if process_id != selected:
+        if not process_id.isascii() or not process_id.isdecimal() or int(process_id) <= 0:
+            raise ValueError("application process IDs must use pid:<positive integer>")
+        return pocketstation.Source.application_process_id(int(process_id))
+    if selected.startswith("bundle:"):
+        bundle_id = selected.removeprefix("bundle:")
+        if not bundle_id:
+            raise ValueError("bundle: application selectors must not be empty")
+        return pocketstation.Source.application_bundle_id(bundle_id)
+    return pocketstation.Source.application(selected)
+
+
+def _read_wave_format(path: str) -> tuple[int, int]:
+    """Read sample rate and channel count from PCM or extensible WAV files."""
+    with open(path, "rb") as audio:
+        if audio.read(4) != b"RIFF":
+            raise ValueError("recording is not a RIFF file")
+        audio.seek(4, 1)
+        if audio.read(4) != b"WAVE":
+            raise ValueError("recording is not a WAVE file")
+        while header := audio.read(8):
+            if len(header) != 8:
+                break
+            chunk_id, chunk_size = struct.unpack("<4sI", header)
+            if chunk_id == b"fmt ":
+                payload = audio.read(chunk_size)
+                if len(payload) < 8:
+                    break
+                _, channels, sample_rate = struct.unpack_from("<HHI", payload)
+                return sample_rate, channels
+            audio.seek(chunk_size + (chunk_size % 2), 1)
+    raise ValueError("recording has no valid WAVE format chunk")
