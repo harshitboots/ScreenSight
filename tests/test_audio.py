@@ -3,12 +3,19 @@ soundcard/numpy hardware path mocked out."""
 
 from __future__ import annotations
 
+import builtins
+import json
 import struct
+import sys
 import wave
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
+import pytest
+
 from screensight import core, state
+from screensight.__main__ import cmd_capture_audio
+from screensight.__main__ import main as cli_main
 from screensight.capture.audio import (
     AudioResult,
     _pocketstation_source,
@@ -45,6 +52,102 @@ def _mock_record(**overrides):
         )
 
     return _record, calls
+
+
+def _install_fake_pocketstation(
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    recording_state: str = "complete",
+    create_wav: bool = True,
+    declared_path: str | None = None,
+) -> list[object]:
+    """Install a small API fake while keeping the manifest/path contract real."""
+    calls: list[object] = []
+
+    class FakeSource:
+        @staticmethod
+        def application(name):
+            calls.append(("application", name))
+            return ("application", name)
+
+        @staticmethod
+        def microphone_default():
+            calls.append(("microphone",))
+            return ("microphone",)
+
+    class FakeStem:
+        def __init__(self, session):
+            self.session = session
+
+        def record(self, name):
+            self.session.stem_label = name
+            calls.append(("record", name))
+
+    class FakeRunning:
+        def __init__(self, session):
+            self.session = session
+
+        def stop(self):
+            if recording_state == "none":
+                return SimpleNamespace(recording=None)
+            root = Path(self.session.recording_root) / "session"
+            root.mkdir(parents=True)
+            label = self.session.stem_label
+            relative_path = declared_path or f"recorded/{label}-capture.wav"
+            captured = root / relative_path
+            if create_wav:
+                captured.parent.mkdir(parents=True, exist_ok=True)
+                _write_silent_wav(captured, sample_rate=48000)
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "state": recording_state,
+                        "stems": [
+                            {
+                                "label": label,
+                                "wav_path": relative_path,
+                                "finalization_state": recording_state,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            return SimpleNamespace(
+                recording=SimpleNamespace(
+                    complete=recording_state == "complete",
+                    session_directory=root,
+                    manifest_path=manifest_path,
+                    manifest_schema_version=2,
+                )
+            )
+
+        def close(self):
+            calls.append("close")
+
+    class FakeSession:
+        def __init__(self, recording_root, sample_rate_hz):
+            self.recording_root = recording_root
+            self.stem_label = ""
+            calls.append(("format", sample_rate_hz))
+
+        def capture(self, declaration):
+            calls.append(("capture", declaration))
+            return FakeStem(self)
+
+        def start(self):
+            calls.append("start")
+            return FakeRunning(self)
+
+    module = ModuleType("pocketstation")
+    module.Source = FakeSource
+    module.Session = FakeSession
+    monkeypatch.setitem(sys.modules, "pocketstation", module)
+    monkeypatch.setattr("screensight.capture.audio.time.sleep", lambda _duration: None)
+    return calls
 
 
 def test_switch_off_short_circuits(tmp_path, monkeypatch):
@@ -146,52 +249,8 @@ def test_turn_off_deletes_audio(tmp_path, monkeypatch):
 
 
 def test_application_capture_uses_pocketstation_recording(tmp_path, monkeypatch):
-    """PocketStation records the selected app and copies only its WAV out."""
-    calls: list[object] = []
-
-    class FakeSource:
-        @staticmethod
-        def application(name):
-            calls.append(("application", name))
-            return ("application", name)
-
-    class FakeStem:
-        def record(self, name):
-            calls.append(("record", name))
-
-    class FakeRunning:
-        def __init__(self, root):
-            self.root = Path(root) / "session"
-
-        def stop(self):
-            stem = self.root / "stems" / "application.wav"
-            stem.parent.mkdir(parents=True)
-            _write_silent_wav(stem, sample_rate=48000)
-            return SimpleNamespace(
-                recording=SimpleNamespace(complete=True, session_directory=self.root)
-            )
-
-        def close(self):
-            calls.append("close")
-
-    class FakeSession:
-        def __init__(self, recording_root, sample_rate_hz, channels):
-            self.recording_root = recording_root
-            calls.append(("format", sample_rate_hz, channels))
-
-        def capture(self, declaration):
-            calls.append(("capture", declaration))
-            return FakeStem()
-
-        def start(self):
-            calls.append("start")
-            return FakeRunning(self.recording_root)
-
-    module = ModuleType("pocketstation")
-    module.Source = FakeSource
-    module.Session = FakeSession
-    monkeypatch.setitem(__import__("sys").modules, "pocketstation", module)
-    monkeypatch.setattr("screensight.capture.audio.time.sleep", lambda _duration: None)
+    """The adapter follows manifest metadata, not a synthesized stems path."""
+    calls = _install_fake_pocketstation(tmp_path, monkeypatch)
 
     output = tmp_path / "audio.wav"
     result = record_pocketstation_audio(str(output), 2, "application", "Zoom")
@@ -201,12 +260,89 @@ def test_application_capture_uses_pocketstation_recording(tmp_path, monkeypatch)
     assert output.is_file()
     assert calls == [
         ("application", "Zoom"),
-        ("format", 48000, 1),
+        ("format", 48000),
         ("capture", ("application", "Zoom")),
         ("record", "application"),
         "start",
         "close",
     ]
+
+
+def test_microphone_capture_uses_returned_manifest_path(tmp_path, monkeypatch):
+    calls = _install_fake_pocketstation(tmp_path, monkeypatch)
+
+    output = tmp_path / "audio.wav"
+    result = record_pocketstation_audio(str(output), 2, "microphone")
+
+    assert result.ok is True
+    assert result.sample_rate == 48000
+    assert output.is_file()
+    assert calls == [
+        ("microphone",),
+        ("format", 48000),
+        ("capture", ("microphone",)),
+        ("record", "microphone"),
+        "start",
+        "close",
+    ]
+
+
+def test_pocketstation_import_error_is_actionable(tmp_path, monkeypatch):
+    monkeypatch.delitem(sys.modules, "pocketstation", raising=False)
+    real_import = builtins.__import__
+
+    def missing_pocketstation(name, *args, **kwargs):
+        if name == "pocketstation":
+            raise ImportError("not installed")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", missing_pocketstation)
+
+    result = record_pocketstation_audio(str(tmp_path / "audio.wav"), 1, "application", "Zoom")
+
+    assert result.ok is False
+    assert result.error == (
+        "PocketStation is not installed — run: pip install 'screensight[pocketstation]'"
+    )
+
+
+@pytest.mark.parametrize("recording_state", ["none", "incomplete"])
+def test_pocketstation_incomplete_recording_fails_closed(tmp_path, monkeypatch, recording_state):
+    _install_fake_pocketstation(
+        tmp_path,
+        monkeypatch,
+        recording_state=recording_state,
+    )
+
+    result = record_pocketstation_audio(str(tmp_path / "audio.wav"), 1, "application", "Zoom")
+
+    assert result.ok is False
+    assert result.error == "PocketStation could not finish the audio recording"
+
+
+def test_pocketstation_missing_declared_recording_fails_closed(tmp_path, monkeypatch):
+    _install_fake_pocketstation(tmp_path, monkeypatch, create_wav=False)
+
+    result = record_pocketstation_audio(str(tmp_path / "audio.wav"), 1, "application", "Zoom")
+
+    assert result.ok is False
+    assert "did not create the declared application recording" in result.error
+
+
+def test_pocketstation_manifest_cannot_escape_session_directory(tmp_path, monkeypatch):
+    outside = tmp_path / "outside.wav"
+    _write_silent_wav(outside, sample_rate=48000)
+    _install_fake_pocketstation(
+        tmp_path,
+        monkeypatch,
+        create_wav=False,
+        declared_path="../outside.wav",
+    )
+
+    result = record_pocketstation_audio(str(tmp_path / "audio.wav"), 1, "application", "Zoom")
+
+    assert result.ok is False
+    assert "unsafe application recording path" in result.error
 
 
 def test_pocketstation_selector_supports_name_bundle_process_and_microphone():
@@ -230,6 +366,15 @@ def test_pocketstation_selector_supports_name_bundle_process_and_microphone():
         ("pid", 123),
         ("microphone",),
     ]
+
+
+@pytest.mark.parametrize("selector", ["bundle:", "pid:", "pid:nope", "pid:-1", "pid:0"])
+def test_pocketstation_selector_rejects_invalid_values(selector):
+    module = ModuleType("pocketstation")
+    module.Source = SimpleNamespace()
+
+    with pytest.raises(ValueError):
+        _pocketstation_source(module, "application", selector)
 
 
 def test_application_source_requires_a_selection(tmp_path, monkeypatch):
@@ -271,6 +416,68 @@ def test_core_routes_microphone_to_pocketstation(tmp_path, monkeypatch):
     assert calls == [(str(tmp_path / "audio.wav"), 3, "microphone", None)]
 
 
+def test_core_rejects_application_selector_for_non_application_source(tmp_path, monkeypatch):
+    monkeypatch.setattr(state, "STATE_FILE", tmp_path / "state.json")
+    monkeypatch.setattr(core, "AUDIO_PATH", tmp_path / "audio.wav")
+    monkeypatch.setenv("SCREENSIGHT_ENABLE_AUDIO", "1")
+    state.turn_on()
+
+    result = core.capture_audio(source="microphone", application="Zoom")
+
+    assert result.ok is False
+    assert result.error == "application may only be set when audio source is 'application'"
+
+
+@pytest.mark.parametrize(
+    ("source", "application"),
+    [("application", None), ("application", " "), ("system", "Zoom"), ("microphone", "Zoom")],
+)
+def test_cli_reports_audio_usage_errors_with_exit_code_2(source, application, monkeypatch, capsys):
+    called = False
+
+    def capture_audio(**_kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(core, "capture_audio", capture_audio)
+    args = SimpleNamespace(duration=5, source=source, application=application)
+
+    with pytest.raises(SystemExit) as error:
+        cmd_capture_audio(args)
+
+    assert error.value.code == 2
+    assert called is False
+    assert "error" in json.loads(capsys.readouterr().err)
+
+
+def test_cli_parser_rejects_invalid_audio_source_with_exit_code_2(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["screensight", "capture-audio", "--source", "not-a-source"],
+    )
+
+    with pytest.raises(SystemExit) as error:
+        cli_main()
+
+    assert error.value.code == 2
+
+
+def test_cli_reports_capture_failure_with_exit_code_3(monkeypatch, capsys):
+    monkeypatch.setattr(
+        core,
+        "capture_audio",
+        lambda **_kwargs: core.CaptureAudioOutcome(ok=False, error="capture backend failed"),
+    )
+    args = SimpleNamespace(duration=5, source="system", application=None)
+
+    with pytest.raises(SystemExit) as error:
+        cmd_capture_audio(args)
+
+    assert error.value.code == 3
+    assert json.loads(capsys.readouterr().err) == {"error": "capture backend failed"}
+
+
 def test_wave_format_reader_accepts_extensible_audio(tmp_path):
     """PocketStation's float WAV header reports its real rate and channels."""
     output = tmp_path / "extensible.wav"
@@ -294,3 +501,10 @@ def test_wave_format_reader_accepts_extensible_audio(tmp_path):
     )
 
     assert _read_wave_format(str(output)) == (48000, 2)
+
+
+def test_wave_format_reader_accepts_plain_pcm_audio(tmp_path):
+    output = tmp_path / "pcm.wav"
+    _write_silent_wav(output, sample_rate=44100)
+
+    assert _read_wave_format(str(output)) == (44100, 1)

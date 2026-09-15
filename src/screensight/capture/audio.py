@@ -1,8 +1,9 @@
-"""System-audio (loopback) capture — the audio counterpart to the screenshot
-backends. Kept in its own module because audio is time-based (a duration),
-not instantaneous like a screenshot, and because its dependencies
-(``soundcard``, ``numpy``) are optional extras that the core screenshot path
-must never import.
+"""Optional audio capture — the audio counterpart to the screenshot backends.
+
+System output uses ``soundcard``; one application or the default microphone
+uses PocketStation. This module stays separate because audio is time-based (a
+duration), not instantaneous like a screenshot, and because both recorders are
+optional dependencies that the core screenshot path must never import.
 
 Platform support via ``soundcard``:
 - Windows: WASAPI loopback works out of the box (records the default speaker).
@@ -18,6 +19,7 @@ degrade gracefully rather than raise, matching the rest of the package.
 
 from __future__ import annotations
 
+import json
 import shutil
 import struct
 import tempfile
@@ -114,7 +116,6 @@ def record_pocketstation_audio(
             session = pocketstation.Session(
                 recording_root=directory,
                 sample_rate_hz=_POCKETSTATION_SAMPLE_RATE,
-                channels=1,
             )
             stem = session.capture(declaration)
             stem.record(source)
@@ -132,12 +133,7 @@ def record_pocketstation_audio(
                     error="PocketStation could not finish the audio recording",
                 )
 
-            captured = Path(recording.session_directory) / "stems" / f"{source}.wav"
-            if not captured.is_file():
-                return AudioResult(
-                    ok=False,
-                    error=f"PocketStation did not create the {source} recording",
-                )
+            captured = _recorded_stem_path(recording, source)
             shutil.copyfile(captured, out_path)
 
         sample_rate, channels = _read_wave_format(out_path)
@@ -150,6 +146,70 @@ def record_pocketstation_audio(
         )
     except Exception as error:  # capture must fail closed, never raise
         return AudioResult(ok=False, error=f"PocketStation audio capture failed: {error}")
+
+
+def _recorded_stem_path(recording: Any, stem_label: str) -> Path:
+    """Resolve one completed stem only through PocketStation's returned manifest."""
+    try:
+        session_directory = Path(recording.session_directory).resolve(strict=True)
+    except (AttributeError, FileNotFoundError, OSError) as error:
+        raise ValueError("PocketStation returned an invalid recording directory") from error
+
+    try:
+        manifest_path = Path(recording.manifest_path)
+    except (AttributeError, TypeError) as error:
+        raise ValueError("PocketStation did not return a recording manifest") from error
+    if not manifest_path.is_absolute():
+        manifest_path = session_directory / manifest_path
+    try:
+        manifest_path = manifest_path.resolve(strict=True)
+        manifest_path.relative_to(session_directory)
+    except (FileNotFoundError, OSError, ValueError) as error:
+        raise ValueError("PocketStation returned an invalid recording manifest path") from error
+    if not manifest_path.is_file():
+        raise ValueError("PocketStation did not return a readable recording manifest")
+
+    try:
+        with manifest_path.open(encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("PocketStation returned an unreadable recording manifest") from error
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("stems"), list):
+        raise TypeError("PocketStation returned an invalid recording manifest")
+
+    expected_schema = getattr(recording, "manifest_schema_version", None)
+    if expected_schema is not None and manifest.get("schema_version") != expected_schema:
+        raise ValueError("PocketStation recording manifest schema does not match its outcome")
+
+    matches = [
+        stem
+        for stem in manifest["stems"]
+        if isinstance(stem, dict) and stem.get("label") == stem_label
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"PocketStation manifest must contain exactly one {stem_label} recording")
+    stem = matches[0]
+    if stem.get("finalization_state") != "complete":
+        raise ValueError(f"PocketStation could not finish the {stem_label} recording")
+
+    declared_path = stem.get("wav_path")
+    if not isinstance(declared_path, str) or not declared_path.strip():
+        raise ValueError(f"PocketStation did not declare the {stem_label} recording path")
+    relative_path = Path(declared_path)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError(f"PocketStation returned an unsafe {stem_label} recording path")
+    try:
+        captured = (session_directory / relative_path).resolve(strict=True)
+        captured.relative_to(session_directory)
+    except FileNotFoundError as error:
+        raise ValueError(
+            f"PocketStation did not create the declared {stem_label} recording"
+        ) from error
+    except (OSError, ValueError) as error:
+        raise ValueError(f"PocketStation returned an unsafe {stem_label} recording path") from error
+    if not captured.is_file():
+        raise ValueError(f"PocketStation did not create the declared {stem_label} recording")
+    return captured
 
 
 def _pocketstation_source(

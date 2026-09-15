@@ -54,10 +54,23 @@ def cmd_capture(args: argparse.Namespace) -> None:
 
 
 def cmd_capture_audio(args: argparse.Namespace) -> None:
+    application = (args.application or "").strip()
+    if args.source == "application" and not application:
+        print(
+            json.dumps({"error": "--application is required with --source application"}),
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if args.source != "application" and application:
+        print(
+            json.dumps({"error": "--application is only valid with --source application"}),
+            file=sys.stderr,
+        )
+        sys.exit(2)
     outcome = core.capture_audio(
         duration=args.duration,
         source=args.source,
-        application=args.application,
+        application=application or None,
     )
     if not outcome.ok:
         print(json.dumps({"error": outcome.error}), file=sys.stderr)

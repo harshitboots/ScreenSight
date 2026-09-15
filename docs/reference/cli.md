@@ -86,12 +86,13 @@ screensight capture-audio --source microphone
 |---|---|---|
 | `--duration` | `5` | Seconds of audio to record (clamped to 1–30) |
 | `--source` | `system` | `system`, `application`, or `microphone` |
-| `--application` | none | Exact app name, `bundle:<id>`, or `pid:<number>` |
+| `--application` | none | Exact app name, `bundle:<id>`, or `pid:<number>`; required only with `--source application` |
 
 System capture keeps ScreenSight's existing `soundcard` recorder. Application and microphone
 capture use PocketStation on macOS, Windows, and Linux. An application name must resolve to
 exactly one running app; ScreenSight reports missing and ambiguous selections instead of
-choosing one silently. The `audio.wav` file is deleted on `screensight off`.
+choosing one silently. Passing `--application` with `system` or `microphone` is a CLI usage
+error. The `audio.wav` file is deleted on `screensight off`.
 
 ## `screensight displays`
 
@@ -141,10 +142,11 @@ Full behaviour is documented in [Watch mode](watch-mode.md).
 | Code | Meaning |
 |------|---------|
 | `0` | Success |
-| `3` | Master switch is off, or capture failed |
+| `2` | Invalid CLI usage, including a missing or misplaced `--application` selector |
+| `3` | Capture was refused by a privacy gate or failed at runtime |
 
-Exit code `3` is the one to branch on in scripts — it covers both "you never turned it on"
-and "the capture was refused or failed".
+Exit code `3` covers both "you never turned it on" and recorder/dependency failures. Exit
+code `2` means the command itself is invalid and should be corrected before retrying.
 
 ```bash
 if screensight capture > frame.json; then

@@ -40,6 +40,9 @@ packages = ["src/screensight"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"
+markers = [
+    "integration: exercises an installed optional dependency without OS capture hardware",
+]
 
 [tool.ruff]
 line-length = 100

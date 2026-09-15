@@ -105,6 +105,11 @@ def capture_audio(
             ok=False,
             error="application is required when audio source is 'application'",
         )
+    if source != "application" and (application or "").strip():
+        return CaptureAudioOutcome(
+            ok=False,
+            error="application may only be set when audio source is 'application'",
+        )
 
     ensure_base_dir()
     if source == "system":

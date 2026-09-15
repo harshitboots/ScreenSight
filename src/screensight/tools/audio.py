@@ -39,7 +39,7 @@ def screen_capture_audio(
     Args:
         duration: Seconds of audio to record (1–30, default 5).
         source: Audio to record: system, application, or microphone.
-        application: Required when source is application.
+        application: Selector required only when source is application.
         question: Optional question to echo back for your context.
 
     Returns:

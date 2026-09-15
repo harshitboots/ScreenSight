@@ -114,6 +114,7 @@ the optional PocketStation recorder:
 ```bash
 pip install 'screensight[pocketstation]'
 screensight capture-audio --source application --application Zoom
+screensight capture-audio --source microphone
 ```
 
 PocketStation captures the selected application directly on macOS, Windows, and Linux. It
@@ -148,7 +149,8 @@ does not require BlackHole, Stereo Mix, or a PulseAudio monitor. Each call repla
 | Code | Meaning |
 |------|---------|
 | `0` | Success |
-| `3` | Master switch is off, or capture failed |
+| `2` | Invalid CLI usage, including a missing or misplaced `--application` selector |
+| `3` | Capture was refused by a privacy gate or failed at runtime |
 
 ## Privacy
 

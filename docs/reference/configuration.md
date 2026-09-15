@@ -120,6 +120,9 @@ screensight capture-audio --source microphone
 | source | `system` | System output, one application, or the default microphone |
 | sample rate | recorder-defined | `44100` Hz for system; `48000` Hz for PocketStation |
 
+The optional extras map directly to the selected source: install `screensight[audio]` for
+`system`, and install `screensight[pocketstation]` for `application` or `microphone`.
+
 The recording is written to `~/.screensight/audio.wav` (a single reused file, like
 `frame.jpg`) and deleted on `screensight off`.
 
@@ -141,7 +144,8 @@ screensight capture-audio --source application --application pid:1234
 
 Display names must match one running application. Use a bundle ID when the display name is
 not unique, or a process ID for one exact running instance. Microphone capture uses the
-current default input device.
+current default input device. Application selectors are required for `application` and are
+rejected for `system` and `microphone`.
 
 ## Resetting
 

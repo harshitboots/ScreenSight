@@ -74,7 +74,7 @@ the agent.
 Input:
   - duration (default 5):  seconds to record (clamped to 1–30)
   - source (default system): system, application, or microphone
-  - application: exact name, bundle:<id>, or pid:<number>; required for application
+  - application: exact name, bundle:<id>, or pid:<number>; set only for application
   - question (optional):   text echoed back for context
 Output: Audio content block (WAV) + text with duration, sample rate and path
 ```
@@ -83,7 +83,8 @@ Output: Audio content block (WAV) + text with duration, sample rate and path
 `SCREENSIGHT_ENABLE_AUDIO=1` environment variable. Install `screensight[audio]` for system
 output or `screensight[pocketstation]` for an application or microphone. If the selected
 recorder is unavailable, the tool explains what to install and does not change ScreenSight's
-existing system-audio behavior.
+existing system-audio behavior. `application` is required when `source=application` and is
+rejected for `system` and `microphone` so a selector is never silently ignored.
 
 PocketStation application capture does not require BlackHole, SoundFlower, Stereo Mix, or a
 PulseAudio monitor. System capture remains available through the existing loopback recorder.
