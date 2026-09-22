@@ -2,4 +2,4 @@
 # Used by `mkdocs serve` locally and by .github/workflows/docs.yml in CI.
 mkdocs>=1.6.1,<2.0
 mkdocs-material>=9.7.7,<10.0
-pymdown-extensions>=11.0.2,<12.0
+pymdown-extensions>=12.0.1,<13.0
