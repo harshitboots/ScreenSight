@@ -30,8 +30,13 @@ jobs:
           pip install -e .
           pip install pytest
 
+      - name: Install PocketStation contract-test dependency
+        if: runner.os == 'macOS' && matrix.python-version == '3.12'
+        run: pip install -e '.[pocketstation]'
+
       # Tests mock all capture backends and never take a real screenshot,
-      # so no display is required on CI runners.
+      # and the PocketStation contract test exercises its recording writer
+      # without opening OS capture devices, so no display is required.
       - name: Run tests
         run: pytest tests/ -v
 

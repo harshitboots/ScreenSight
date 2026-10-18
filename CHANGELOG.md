@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `audio.wav` is cleaned up on `screensight off`, alongside `frame.jpg`.
   - Loopback via `soundcard`: Windows (WASAPI) and Linux (PulseAudio monitor) work out of
     the box; macOS/WSL need a virtual output device (BlackHole/SoundFlower).
+  - Optional PocketStation capture for one application or the default microphone on macOS,
+    Windows, and Linux, without changing the existing screenshot or loopback recorders.
 
 ## [0.1.0] - 2026-08-11
 
